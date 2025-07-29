@@ -193,13 +193,14 @@ tr:hover{background:var(--clr-bg)}
 .negative{color:var(--clr-negative);font-weight:600}
 
 /* Column specific alignments */
-table th:nth-child(1), table td:nth-child(1) { width: 8%; text-align: center; } /* Logo */
-table th:nth-child(2), table td:nth-child(2) { width: 12%; text-align: left; } /* Ticker */
-table th:nth-child(3), table td:nth-child(3) { width: 18%; text-align: right; } /* Market Cap */
-table th:nth-child(4), table td:nth-child(4) { width: 20%; text-align: right; } /* Pre-Market Price */
-table th:nth-child(5), table td:nth-child(5) { width: 15%; text-align: right; } /* % Change */
-table th:nth-child(6), table td:nth-child(6) { width: 20%; text-align: right; } /* Market Cap Diff */
-table th:nth-child(7), table td:nth-child(7) { width: 7%; text-align: center; } /* Favorite */
+table th:nth-child(1), table td:nth-child(1) { width: 6%; text-align: center; } /* Logo */
+table th:nth-child(2), table td:nth-child(2) { width: 10%; text-align: center; } /* Ticker */
+table th:nth-child(3), table td:nth-child(3) { width: 20%; text-align: left; } /* Company Name */
+table th:nth-child(4), table td:nth-child(4) { width: 12%; text-align: center; } /* Market Cap */
+table th:nth-child(5), table td:nth-child(5) { width: 15%; text-align: center; } /* Pre-Market Price */
+table th:nth-child(6), table td:nth-child(6) { width: 12%; text-align: center; } /* % Change */
+table th:nth-child(7), table td:nth-child(7) { width: 15%; text-align: center; } /* Market Cap Diff */
+table th:nth-child(8), table td:nth-child(8) { width: 10%; text-align: center; } /* Favorite */
 
 /* === COMPANY LOGO ======================================= */
 .company-logo{
@@ -208,6 +209,26 @@ table th:nth-child(7), table td:nth-child(7) { width: 7%; text-align: center; } 
   border-radius:4px;
   object-fit:contain;
   vertical-align:middle;
+}
+
+.company-logo-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: var(--clr-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--clr-subtext);
+  border: 1px solid var(--clr-border);
+}
+
+.company-name {
+  text-align: left;
+  font-weight: 500;
+  color: var(--clr-text);
 }
 
 /* === FAVORITES / SECTIONS =============================== */
@@ -257,8 +278,9 @@ table th:nth-child(7), table td:nth-child(7) { width: 7%; text-align: center; } 
   display:flex;
   align-items:center;
   justify-content:center;
-  width:1.5rem;
+  width:100%;
   height:1.5rem;
+  margin:0 auto;
 }
 .favorite-btn:hover{
   transform:scale(1.1);
@@ -373,11 +395,12 @@ table th:nth-child(7), table td:nth-child(7) { width: 7%; text-align: center; } 
   }
   
   /* Mobile column adjustments */
-  table th:nth-child(1), table td:nth-child(1) { width: 10%; } /* Logo */
-  table th:nth-child(2), table td:nth-child(2) { width: 15%; } /* Ticker */
-  table th:nth-child(3), table td:nth-child(3) { width: 20%; } /* Market Cap */
-  table th:nth-child(4), table td:nth-child(4) { width: 22%; } /* Pre-Market Price */
-  table th:nth-child(5), table td:nth-child(5) { width: 18%; } /* % Change */
-  table th:nth-child(6), table td:nth-child(6) { width: 10%; } /* Market Cap Diff */
-  table th:nth-child(7), table td:nth-child(7) { width: 5%; } /* Favorite */
+  table th:nth-child(1), table td:nth-child(1) { width: 8%; text-align: center; } /* Logo */
+  table th:nth-child(2), table td:nth-child(2) { width: 12%; text-align: center; } /* Ticker */
+  table th:nth-child(3), table td:nth-child(3) { width: 18%; text-align: left; } /* Company Name */
+  table th:nth-child(4), table td:nth-child(4) { width: 15%; text-align: center; } /* Market Cap */
+  table th:nth-child(5), table td:nth-child(5) { width: 18%; text-align: center; } /* Pre-Market Price */
+  table th:nth-child(6), table td:nth-child(6) { width: 12%; text-align: center; } /* % Change */
+  table th:nth-child(7), table td:nth-child(7) { width: 12%; text-align: center; } /* Market Cap Diff */
+  table th:nth-child(8), table td:nth-child(8) { width: 5%; text-align: center; } /* Favorite */
 } 

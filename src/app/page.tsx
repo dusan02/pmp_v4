@@ -88,7 +88,7 @@ export default function HomePage() {
   const getCompanyName = (ticker: string): string => {
     const companyNames: Record<string, string> = {
       'NVDA': 'NVIDIA', 'MSFT': 'Microsoft', 'AAPL': 'Apple', 'AMZN': 'Amazon', 'GOOGL': 'Alphabet', 'GOOG': 'Alphabet',
-      'META': 'Meta', 'AVGO': 'Broadcom', 'BRK.A': 'Berkshire Hathaway', 'BRK.B': 'Berkshire Hathaway', 'TSLA': 'Tesla', 'JPM': 'JPMorgan Chase',
+      'META': 'Meta', 'AVGO': 'Broadcom', 'BRK.A': 'Berkshire Hathaway', 'TSLA': 'Tesla', 'JPM': 'JPMorgan Chase',
       'WMT': 'Walmart', 'LLY': 'Eli Lilly', 'ORCL': 'Oracle', 'V': 'Visa', 'MA': 'Mastercard', 'NFLX': 'Netflix',
       'XOM': 'ExxonMobil', 'COST': 'Costco', 'JNJ': 'Johnson & Johnson', 'HD': 'Home Depot', 'PLTR': 'Palantir',
       'PG': 'Procter & Gamble', 'BAC': 'Bank of America', 'ABBV': 'AbbVie', 'CVX': 'Chevron', 'KO': 'Coca-Cola',
@@ -185,7 +185,7 @@ export default function HomePage() {
           <span className="brand-gradient">Market</span>
           <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
         </h1>
-        <p>Track real-time pre-market movements of the top 200 US companies. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
+        <p>Track real-time pre-market movements of the top 200 largest companies traded in the US. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
         <div className="header-actions">
           <button onClick={() => fetchStockData(false)} disabled={loading}>
             {loading ? 'Refreshing...' : 'Refresh Data'}
@@ -208,31 +208,32 @@ export default function HomePage() {
       {favoriteStocks.length > 0 && (
         <section className="favorites">
           <h2 data-icon="⭐">Favorites</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Logo</th>
-                <th onClick={() => requestFavSort("ticker" as SortKey)} className="sortable">
-                  Ticker
-                  {renderSortIcon("ticker", favSortKey, favAscending)}
-                </th>
-                <th onClick={() => requestFavSort("marketCap" as SortKey)} className="sortable">
-                  Market Cap&nbsp;(B)
-                  {renderSortIcon("marketCap", favSortKey, favAscending)}
-                </th>
-                <th onClick={() => requestFavSort("preMarketPrice" as SortKey)} className="sortable">
-                  Current Price ($)
-                  {renderSortIcon("preMarketPrice", favSortKey, favAscending)}
-                </th>
-                <th onClick={() => requestFavSort("percentChange" as SortKey)} className="sortable">
-                  % Change
-                  {renderSortIcon("percentChange", favSortKey, favAscending)}
-                </th>
-                <th onClick={() => requestFavSort("marketCapDiff" as SortKey)} className="sortable">
-                  Market Cap Diff (B $)
-                  {renderSortIcon("marketCapDiff", favSortKey, favAscending)}
-                </th>
-                <th>Favorite</th>
+                  <table>
+          <thead>
+            <tr>
+              <th>Logo</th>
+              <th onClick={() => requestFavSort("ticker" as SortKey)} className="sortable">
+                Ticker
+                {renderSortIcon("ticker", favSortKey, favAscending)}
+              </th>
+              <th>Company Name</th>
+              <th onClick={() => requestFavSort("marketCap" as SortKey)} className="sortable">
+                Market Cap&nbsp;(B)
+                {renderSortIcon("marketCap", favSortKey, favAscending)}
+              </th>
+              <th onClick={() => requestFavSort("preMarketPrice" as SortKey)} className="sortable">
+                Current Price ($)
+                {renderSortIcon("preMarketPrice", favSortKey, favAscending)}
+              </th>
+              <th onClick={() => requestFavSort("percentChange" as SortKey)} className="sortable">
+                % Change
+                {renderSortIcon("percentChange", favSortKey, favAscending)}
+              </th>
+              <th onClick={() => requestFavSort("marketCapDiff" as SortKey)} className="sortable">
+                Market Cap Diff (B $)
+                {renderSortIcon("marketCapDiff", favSortKey, favAscending)}
+              </th>
+              <th>Favorites</th>
               </tr>
             </thead>
             <tbody>
@@ -243,10 +244,17 @@ export default function HomePage() {
                       src={getLogoUrl(stock.ticker)}
                       alt={`${stock.ticker} logo`}
                       className="company-logo"
-                      onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }}
+                      onError={(e) => { 
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'company-logo-placeholder';
+                        placeholder.textContent = stock.ticker;
+                        (e.target as HTMLImageElement).parentNode?.appendChild(placeholder);
+                      }}
                     />
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
+                  <td className="company-name">{getCompanyName(stock.ticker)}</td>
                   <td>{formatBillions(stock.marketCap)}</td>
                   <td>{stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
                   <td className={stock.percentChange >= 0 ? 'positive' : 'negative'}>
@@ -295,6 +303,7 @@ export default function HomePage() {
                 Ticker
                 {renderSortIcon("ticker", allSortKey, allAscending)}
               </th>
+              <th>Company Name</th>
               <th onClick={() => requestAllSort("marketCap" as SortKey)} className="sortable">
                 Market Cap&nbsp;(B)
                 {renderSortIcon("marketCap", allSortKey, allAscending)}
@@ -311,7 +320,7 @@ export default function HomePage() {
                 Market Cap Diff (B $)
                 {renderSortIcon("marketCapDiff", allSortKey, allAscending)}
               </th>
-              <th>Favorite</th>
+              <th>Favorites</th>
             </tr>
           </thead>
           <tbody>
@@ -324,10 +333,17 @@ export default function HomePage() {
                       src={getLogoUrl(stock.ticker)}
                       alt={`${stock.ticker} logo`}
                       className="company-logo"
-                      onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }}
+                      onError={(e) => { 
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'company-logo-placeholder';
+                        placeholder.textContent = stock.ticker;
+                        (e.target as HTMLImageElement).parentNode?.appendChild(placeholder);
+                      }}
                     />
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
+                  <td className="company-name">{getCompanyName(stock.ticker)}</td>
                   <td>{formatBillions(stock.marketCap)}</td>
                   <td>{stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
                   <td className={stock.percentChange >= 0 ? 'positive' : 'negative'}>
