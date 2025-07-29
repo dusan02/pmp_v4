@@ -9,20 +9,21 @@ interface Favorite {
   market_cap?: number;
 }
 
-export function useFavorites(userId: string = 'default') {
+export function useFavorites(userId?: string) {
+  const effectiveUserId = userId || 'default';
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load favorites from database
+    // Load favorites from database
   const loadFavorites = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch(`/api/favorites?userId=${userId}`);
+      const response = await fetch('/api/favorites');
       const data = await response.json();
-      
+
       if (data.success) {
         setFavorites(data.data);
       } else {
@@ -34,9 +35,9 @@ export function useFavorites(userId: string = 'default') {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
-  // Add favorite to database
+    // Add favorite to database
   const addFavorite = useCallback(async (ticker: string) => {
     try {
       const response = await fetch('/api/favorites', {
@@ -44,11 +45,11 @@ export function useFavorites(userId: string = 'default') {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId, ticker }),
+        body: JSON.stringify({ ticker }),
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         // Reload favorites to get updated list
         await loadFavorites();
@@ -62,17 +63,17 @@ export function useFavorites(userId: string = 'default') {
       console.error('Error adding favorite:', err);
       return false;
     }
-  }, [userId, loadFavorites]);
+  }, [loadFavorites]);
 
-  // Remove favorite from database
+    // Remove favorite from database
   const removeFavorite = useCallback(async (ticker: string) => {
     try {
-      const response = await fetch(`/api/favorites?userId=${userId}&ticker=${ticker}`, {
+      const response = await fetch(`/api/favorites?ticker=${ticker}`, {
         method: 'DELETE',
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         // Reload favorites to get updated list
         await loadFavorites();
@@ -86,7 +87,7 @@ export function useFavorites(userId: string = 'default') {
       console.error('Error removing favorite:', err);
       return false;
     }
-  }, [userId, loadFavorites]);
+  }, [loadFavorites]);
 
   // Check if ticker is in favorites
   const isFavorite = useCallback((ticker: string) => {

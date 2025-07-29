@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronUp, ChevronDown, Download, Table } from 'lucide-react';
+import { ChevronUp, ChevronDown, Download, Table, User, LogOut } from 'lucide-react';
 import { useSortableData } from '@/hooks/useSortableData';
 import { formatBillions } from '@/lib/format';
 import { getLogoUrl } from '@/lib/getLogoUrl';
 import { useFavorites } from '@/hooks/useFavorites';
+import { useAuth } from '@/hooks/useAuth';
+import AuthModal from '@/components/AuthModal';
 
 interface StockData {
   ticker: string;
@@ -22,9 +24,13 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
-  // Use database-backed favorites
-  const { favorites, toggleFavorite, isFavorite } = useFavorites('default');
+  // Authentication
+  const { user, loading: authLoading, logout } = useAuth();
+  
+  // Use database-backed favorites with user ID
+  const { favorites, toggleFavorite, isFavorite } = useFavorites(user?.id || 'default');
 
 
   // Mock data for demonstration
@@ -185,24 +191,48 @@ export default function HomePage() {
   };
 
   return (
-    <div className="container">
-      <div className="header">
-        <h1 className="brand-heading">
-          <span className="brand-dark">Pre</span>
-          <span className="brand-gradient">Market</span>
-          <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
-        </h1>
-        <p>Track real-time pre-market movements of the top 300 largest companies traded globally. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
-        <div className="header-actions">
-          <button onClick={() => fetchStockData(false)} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh Data'}
-          </button>
-          <button onClick={exportToCSV} className="export-btn">
-            <Table size={16} />
-            Export CSV
-          </button>
+          <div className="container">
+        <div className="header">
+          <div className="header-content">
+            <h1 className="brand-heading">
+              <span className="brand-dark">Pre</span>
+              <span className="brand-gradient">Market</span>
+              <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
+            </h1>
+            <p>Track real-time pre-market movements of the top 300 largest companies traded globally. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
+          </div>
+          
+          {/* Auth Section */}
+          <div className="auth-section">
+            {user ? (
+              <div className="user-info">
+                <div className="user-details">
+                  <p className="user-name">{user.name || user.email}</p>
+                  <p className="user-status">Signed in</p>
+                </div>
+                <button onClick={logout} className="logout-btn">
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowAuthModal(true)} className="signin-btn">
+                <User size={20} />
+                Sign In
+              </button>
+            )}
+          </div>
+          
+          <div className="header-actions">
+            <button onClick={() => fetchStockData(false)} disabled={loading}>
+              {loading ? 'Refreshing...' : 'Refresh Data'}
+            </button>
+            <button onClick={exportToCSV} className="export-btn">
+              <Table size={16} />
+              Export CSV
+            </button>
+          </div>
         </div>
-      </div>
 
       {error && (
         <div className="error">
@@ -391,6 +421,17 @@ export default function HomePage() {
           </a>
         </p>
       </div>
+      
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={(user) => {
+          setShowAuthModal(false);
+          // Refresh favorites after login
+          window.location.reload();
+        }}
+      />
     </div>
   );
 } 

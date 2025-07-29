@@ -51,10 +51,30 @@ db.exec(`
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   -- Indexes for better performance
   CREATE INDEX IF NOT EXISTS idx_price_history_ticker_timestamp ON price_history(ticker, timestamp);
   CREATE INDEX IF NOT EXISTS idx_user_favorites_user_id ON user_favorites(user_id);
   CREATE INDEX IF NOT EXISTS idx_price_history_timestamp ON price_history(timestamp);
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 `);
 
 // Database helper functions
@@ -158,6 +178,59 @@ export const dbHelpers = {
   cleanupOldData: db.prepare(`
     DELETE FROM price_history 
     WHERE timestamp < datetime('now', '-30 days')
+  `),
+
+  // User management
+  createUser: db.prepare(`
+    INSERT INTO users (id, email, password_hash, name)
+    VALUES (?, ?, ?, ?)
+  `),
+
+  getUserByEmail: db.prepare(`
+    SELECT * FROM users WHERE email = ?
+  `),
+
+  getUserById: db.prepare(`
+    SELECT id, email, name, created_at FROM users WHERE id = ?
+  `),
+
+  updateUser: db.prepare(`
+    UPDATE users 
+    SET email = ?, name = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `),
+
+  updatePassword: db.prepare(`
+    UPDATE users 
+    SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `),
+
+  // Session management
+  createSession: db.prepare(`
+    INSERT INTO sessions (id, user_id, expires_at)
+    VALUES (?, ?, ?)
+  `),
+
+  getSession: db.prepare(`
+    SELECT s.*, u.email, u.name 
+    FROM sessions s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.id = ? AND s.expires_at > datetime('now')
+  `),
+
+  deleteSession: db.prepare(`
+    DELETE FROM sessions WHERE id = ?
+  `),
+
+  deleteUserSessions: db.prepare(`
+    DELETE FROM sessions WHERE user_id = ?
+  `),
+
+  // Cleanup expired sessions
+  cleanupExpiredSessions: db.prepare(`
+    DELETE FROM sessions 
+    WHERE expires_at < datetime('now')
   `)
 };
 
@@ -170,7 +243,7 @@ export function runTransaction<T>(fn: () => T): T {
 // Database initialization
 export function initializeDatabase() {
   console.log('✅ Database initialized at:', dbPath);
-  
+
   // Run cleanup every day
   setInterval(() => {
     try {
@@ -180,6 +253,16 @@ export function initializeDatabase() {
       console.error('Error cleaning up old data:', error);
     }
   }, 24 * 60 * 60 * 1000); // 24 hours
+
+  // Run session cleanup every hour
+  setInterval(() => {
+    try {
+      dbHelpers.cleanupExpiredSessions.run();
+      console.log('🧹 Cleaned up expired sessions');
+    } catch (error) {
+      console.error('Error cleaning up sessions:', error);
+    }
+  }, 60 * 60 * 1000); // 1 hour
 }
 
 // Export database instance for direct access if needed

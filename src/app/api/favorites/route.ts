@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbHelpers, runTransaction } from '@/lib/database';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'default';
+    const user = await getCurrentUser(request);
+    const userId = user?.id || 'default';
 
     const favorites = dbHelpers.getUserFavorites.all(userId);
     
@@ -25,11 +26,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, ticker } = await request.json();
+    const { ticker } = await request.json();
+    const user = await getCurrentUser(request);
+    const userId = user?.id || 'default';
 
-    if (!userId || !ticker) {
+    if (!ticker) {
       return NextResponse.json(
-        { error: 'userId and ticker are required' },
+        { error: 'ticker is required' },
         { status: 400 }
       );
     }
@@ -55,12 +58,13 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const ticker = searchParams.get('ticker');
+    const user = await getCurrentUser(request);
+    const userId = user?.id || 'default';
 
-    if (!userId || !ticker) {
+    if (!ticker) {
       return NextResponse.json(
-        { error: 'userId and ticker are required' },
+        { error: 'ticker is required' },
         { status: 400 }
       );
     }
