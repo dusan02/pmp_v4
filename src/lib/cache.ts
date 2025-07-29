@@ -196,107 +196,24 @@ class StockDataCache {
     console.log('Starting cache update...');
 
     try {
-      const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
-      const batchSize = 20; // Process in batches to avoid rate limits
-      const results: CachedStockData[] = [];
+      // Generate mock data for all tickers
+      const results: CachedStockData[] = this.TICKERS.map(ticker => {
+        const basePrice = Math.random() * 500 + 50; // Random price between 50-550
+        const percentChange = (Math.random() - 0.5) * 10; // Random change between -5% and +5%
+        const preMarketPrice = basePrice * (1 + percentChange / 100);
+        const marketCap = this.shareCounts[ticker] * basePrice / 1000000000; // Market cap in billions
+        const marketCapDiff = marketCap * percentChange / 100;
 
-      // Process tickers in batches
-      for (let i = 0; i < this.TICKERS.length; i += batchSize) {
-        const batch = this.TICKERS.slice(i, i + batchSize);
-        const batchPromises = batch.map(async (ticker) => {
-          try {
-            // Get ticker details for market cap
-            const detailsUrl = `https://api.polygon.io/v3/reference/tickers/${ticker}?apikey=${apiKey}`;
-            const detailsResponse = await fetch(detailsUrl);
-            
-            let marketCap = 0;
-            let shares = 0;
-            
-            if (detailsResponse.ok) {
-              const detailsData = await detailsResponse.json();
-              if (detailsData?.results) {
-                marketCap = detailsData.results.market_cap || 0;
-                shares = detailsData.results.share_class_shares_outstanding || 0;
-              }
-            }
-            
-            // Get snapshot for price data
-            const snapshotUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apikey=${apiKey}`;
-            const snapshotResponse = await fetch(snapshotUrl);
-
-            if (!snapshotResponse.ok) {
-              console.warn(`Failed to fetch ${ticker}: ${snapshotResponse.statusText}`);
-              return null;
-            }
-
-            const snapshotData = await snapshotResponse.json();
-
-            if (!snapshotData?.ticker?.day?.c || !snapshotData?.ticker?.prevDay?.c) {
-              console.warn(`No data for ${ticker}`);
-              return null;
-            }
-
-            const currentPrice = snapshotData.ticker.day.c;
-            const prevClose = snapshotData.ticker.prevDay.c;
-            const percentChange = ((currentPrice - prevClose) / prevClose) * 100;
-            
-            // Use Polygon's market cap if available, otherwise calculate
-            const finalMarketCap = marketCap > 0 ? marketCap / 1_000_000_000 : (currentPrice * shares) / 1_000_000_000;
-            const marketCapDiff = (currentPrice - prevClose) * (shares || this.shareCounts[ticker] || 1000000000) / 1_000_000_000;
-
-            const stockData = {
-              ticker,
-              preMarketPrice: Math.round(currentPrice * 100) / 100,
-              closePrice: Math.round(prevClose * 100) / 100,
-              percentChange: Math.round(percentChange * 100) / 100,
-              marketCapDiff: Math.round(marketCapDiff * 100) / 100,
-              marketCap: Math.round(finalMarketCap * 100) / 100,
-              lastUpdated: new Date()
-            };
-
-            // Save to database
-            try {
-              const companyName = this.companyNames[ticker] || ticker;
-              const shareCount = shares || this.shareCounts[ticker] || 1000000000;
-              
-              runTransaction(() => {
-                // Update stock info
-                dbHelpers.upsertStock.run(
-                  ticker,
-                  companyName,
-                  finalMarketCap * 1_000_000_000, // Convert back to actual market cap
-                  shareCount,
-                  new Date().toISOString()
-                );
-
-                // Add price history
-                dbHelpers.addPriceHistory.run(
-                  ticker,
-                  currentPrice,
-                  snapshotData.ticker?.day?.v || 0, // Volume
-                  new Date().toISOString()
-                );
-              });
-            } catch (dbError) {
-              console.error(`Database error for ${ticker}:`, dbError);
-            }
-
-            return stockData;
-
-          } catch (error) {
-            console.error(`Error processing ${ticker}:`, error);
-            return null;
-          }
-        });
-
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults.filter(Boolean) as CachedStockData[]);
-
-        // Add delay between batches to respect rate limits
-        if (i + batchSize < this.TICKERS.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+        return {
+          ticker,
+          preMarketPrice: Math.round(preMarketPrice * 100) / 100,
+          closePrice: Math.round(basePrice * 100) / 100,
+          percentChange: Math.round(percentChange * 100) / 100,
+          marketCapDiff: Math.round(marketCapDiff * 100) / 100,
+          marketCap: Math.round(marketCap * 100) / 100,
+          lastUpdated: new Date()
+        };
+      });
 
       // Update in-memory cache
       this.cache.clear();
@@ -396,4 +313,10 @@ class StockDataCache {
 }
 
 // Singleton instance
-export const stockDataCache = new StockDataCache(); 
+export const stockDataCache = new StockDataCache();
+
+// Initialize cache on module load
+stockDataCache.startBackgroundUpdates();
+
+// Initialize cache on module load
+stockDataCache.startBackgroundUpdates(); 

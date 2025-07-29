@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { initializePreloading } from '@/lib/preload'
+import { initializePWA } from '@/lib/sw-register'
+import PerformanceOptimizer from '@/components/PerformanceOptimizer'
 
 export const metadata: Metadata = {
   title: 'PreMarketPrice.com - Real-Time Pre-Market Stock Tracking | Top 200 US Companies',
@@ -60,9 +63,27 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Initialize preloading optimizations and PWA features
+  if (typeof window !== 'undefined') {
+    initializePreloading();
+    initializePWA();
+  }
+
   return (
     <html lang="en">
       <head>
+        {/* Preload critical resources */}
+        <link rel="preload" href="/favicon.ico" as="image" />
+        <link rel="preload" href="/og-image.png" as="image" />
+        <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" />
+        
+        {/* Preconnect to external domains */}
+        <link rel="preconnect" href="https://logo.clearbit.com" />
+        <link rel="preconnect" href="https://ui-avatars.com" />
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+        
+        {/* Standard meta tags */}
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
@@ -97,7 +118,9 @@ export default function RootLayout({
         />
       </head>
       <body>
-        {children}
+        <PerformanceOptimizer>
+          {children}
+        </PerformanceOptimizer>
       </body>
     </html>
   )

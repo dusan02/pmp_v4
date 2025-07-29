@@ -9,6 +9,9 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
 import AuthModal from '@/components/AuthModal';
 import { Activity } from 'lucide-react';
+import CompanyLogo from '@/components/CompanyLogo';
+import { usePerformance } from '@/hooks/usePerformance';
+import { preloadCriticalLogos } from '@/lib/preload';
 
 interface StockData {
   ticker: string;
@@ -37,6 +40,9 @@ export default function HomePage() {
   
   // Use database-backed favorites with user ID
   const { favorites, toggleFavorite, isFavorite } = useFavorites(user?.id || 'default');
+  
+  // Performance monitoring
+  usePerformance();
 
   // Fetch background service status
   useEffect(() => {
@@ -74,6 +80,14 @@ export default function HomePage() {
     // Fetch real data on startup
     fetchStockData(false);
   }, []);
+
+  // Preload critical logos when stock data is available
+  useEffect(() => {
+    if (stockData.length > 0) {
+      const tickers = stockData.map(stock => stock.ticker);
+      preloadCriticalLogos(tickers);
+    }
+  }, [stockData]);
 
   const fetchStockData = async (refresh = false) => {
     setLoading(true);
@@ -308,18 +322,10 @@ export default function HomePage() {
               {favoriteStocksSorted.map((stock) => (
                 <tr key={stock.ticker}>
                   <td>
-                    <img
-                      src={getLogoUrl(stock.ticker)}
-                      alt={`${stock.ticker} logo`}
-                      className="company-logo"
-                      onError={(e) => { 
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = 'none';
-                        const placeholder = document.createElement('div');
-                        placeholder.className = 'company-logo-placeholder';
-                        placeholder.textContent = stock.ticker;
-                        img.parentNode?.appendChild(placeholder);
-                      }}
+                    <CompanyLogo 
+                      ticker={stock.ticker} 
+                      size={32} 
+                      priority={true}
                     />
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
@@ -398,18 +404,10 @@ export default function HomePage() {
               return (
                 <tr key={stock.ticker}>
                   <td>
-                    <img
-                      src={getLogoUrl(stock.ticker)}
-                      alt={`${stock.ticker} logo`}
-                      className="company-logo"
-                      onError={(e) => { 
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = 'none';
-                        const placeholder = document.createElement('div');
-                        placeholder.className = 'company-logo-placeholder';
-                        placeholder.textContent = stock.ticker;
-                        img.parentNode?.appendChild(placeholder);
-                      }}
+                    <CompanyLogo 
+                      ticker={stock.ticker} 
+                      size={32} 
+                      priority={false}
                     />
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
