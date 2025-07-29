@@ -1,218 +1,147 @@
 # PreMarketPrice.com
 
-Moderná webová aplikácia pre zobrazenie pre-market percentuálnych zmien a rozdielov trhovej kapitalizácie pre S&P 500 spoločnosti.
+Aplikácia pre zobrazenie pre-market dát akcií S&P 500 spoločností s kompaktným dizajnom.
 
-## 🚀 Funkcie
+## Funkcie
 
-- **Pre-market dáta** - Zobrazenie predtrhových cien a zmien
-- **Favority** - Uloženie obľúbených akcií do localStorage
-- **Moderný dizajn** - Responzívny UI s dark mode podporou
-- **Real-time dáta** - Aktualizácia cez Polygon.io API
-- **Responzívnosť** - Optimalizované pre mobile a desktop
+- 📊 Zobrazenie pre-market percentuálnych zmien
+- 💰 Rozdiely v trhovej kapitalizácii
+- ⭐ Systém obľúbených akcií
+- 🔄 Možnosť obnovenia dát
+- 📱 Responzívny dizajn
+- 🎨 Kompaktný vzhľad pre efektívne využitie priestoru
 
-## 🛠️ Tech Stack
+## Technológie
 
-- **Frontend**: Next.js 14 (App Router), TypeScript
-- **Styling**: CSS Variables, Modern CSS Grid/Flexbox
-- **API**: Polygon.io pre akciové dáta
-- **Database**: PostgreSQL s Prisma ORM
-- **Deployment**: Vercel/Railway ready
+- **Frontend**: Next.js 15.4.4, React 19.1.0
+- **Styling**: CSS s CSS Variables (podpora dark/light mode)
+- **Icons**: Lucide React
+- **Data**: Mock dáta + API endpoint pre Polygon.io
+- **Port**: 3002
 
-## 📁 Štruktúra projektu
+## Inštalácia
+
+1. **Klonovanie repozitára**:
+
+   ```bash
+   git clone <repository-url>
+   cd PreMarketPrice
+   ```
+
+2. **Inštalácia závislostí**:
+
+   ```bash
+   npm install
+   ```
+
+3. **Spustenie vývojového servera**:
+
+   ```bash
+   npm run dev
+   ```
+
+4. **Otvorenie aplikácie**:
+   Otvorte prehliadač a prejdite na `http://localhost:3002`
+
+## Štruktúra projektu
 
 ```
-PreMarketPrice/
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── prices/
-│   │   │       └── route.ts
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   └── lib/
-│       └── prisma.ts
-├── prisma/
-│   ├── schema.prisma
-│   └── seed.ts
-├── export.html          # Standalone HTML verzia
-├── style.css           # Moderný CSS pre standalone verziu
-├── docker-compose.yml
-└── package.json
+src/
+├── app/
+│   ├── api/
+│   │   ├── history/route.ts
+│   │   └── prices/route.ts
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── FavoriteCard.tsx
+│   ├── StockTable.tsx
+│   └── ThemeToggle.tsx
+├── hooks/
+│   ├── useSortableData.ts
+│   └── useSortableTable.ts
+└── lib/
+    ├── format.ts
+    ├── getLogoUrl.ts
+    └── prisma.ts
 ```
 
-## 🚀 Rýchly štart
+## Konfigurácia
 
-### 1. Standalone HTML verzia (najrýchlejší spôsob)
+### Port
 
-```bash
-# Otvori export.html v prehliadači
-open export.html
-```
-
-### 2. Next.js verzia
-
-```bash
-# Inštalácia závislostí
-npm install
-
-# Spustenie development servera
-npm run dev
-
-# Otvoriť http://localhost:3000
-```
-
-### 3. S databázou
-
-```bash
-# Spustenie PostgreSQL cez Docker
-docker-compose up -d db
-
-# Nastavenie databázy
-npx prisma migrate dev
-npx prisma db seed
-
-# Spustenie aplikácie
-npm run dev
-```
-
-## 🔧 Konfigurácia
-
-### Environment Variables
-
-Vytvorte `.env.local` súbor:
-
-```env
-# Polygon.io API Key
-POLYGON_API_KEY=your_api_key_here
-
-# Database URL
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/premarketprice"
-```
-
-### Polygon.io API
-
-1. Zaregistrujte sa na [polygon.io](https://polygon.io)
-2. Získajte API key
-3. Pridajte do `.env.local`
-
-## 🎨 Dizajn
-
-### Light Mode
-
-- Svetlé pozadie (`#f7f8fa`)
-- Biela plocha (`#ffffff`)
-- Modré primárne farby
-
-### Dark Mode
-
-- Automatické prepínanie podľa systémových nastavení
-- Tmavé pozadie (`#0f172a`)
-- Svetlý text (`#f1f5f9`)
-
-### Responzívnosť
-
-- Mobile-first prístup
-- Optimalizované pre všetky zariadenia
-- Flexibilné tabuľky
-
-## 📊 API Endpoints
-
-### GET /api/prices
-
-Získa pre-market dáta pre S&P 500 spoločnosti.
-
-**Response:**
+Aplikácia beží na porte 3002. Ak chcete zmeniť port, upravte `package.json`:
 
 ```json
-[
-  {
-    "ticker": "AAPL",
-    "preMarketPrice": 150.25,
-    "closePrice": 148.5,
-    "percentChange": 1.18,
-    "marketCapDiff": 2.5
+{
+  "scripts": {
+    "dev": "next dev --turbopack -p 3002"
   }
-]
-```
-
-## 🗄️ Databáza
-
-### Schema
-
-```prisma
-model PriceSnapshot {
-  id            String   @id @default(cuid())
-  ticker        String
-  preMarketPrice Float
-  closePrice    Float
-  percentChange Float
-  marketCapDiff Float
-  createdAt     DateTime @default(now())
 }
 ```
 
-## 🚀 Deployment
+### API kľúče
 
-### Vercel
+Pre reálne dáta potrebujete Polygon.io API kľúč. Vytvorte `.env.local` súbor:
 
-```bash
-npm run build
-vercel --prod
+```env
+POLYGON_API_KEY=your_api_key_here
 ```
 
-### Railway
+## Používanie
+
+1. **Zobrazenie dát**: Aplikácia automaticky zobrazuje mock dáta
+2. **Obnovenie dát**: Kliknite na "Refresh Data" pre načítanie nových dát
+3. **Obľúbené**: Kliknite na hviezdičku pre pridanie/odstránenie z obľúbených
+4. **Zoradenie**: Kliknite na hlavičky stĺpcov pre zoradenie
+
+## Zálohovanie
+
+### Git (Odporúčané)
 
 ```bash
-railway up
+# Vytvorenie commit
+git add .
+git commit -m "Update: description of changes"
+
+# Push na remote repository
+git push origin main
 ```
 
-## 📝 Scripts
+### Manuálna záloha
+
+Skopírujte celý priečinok projektu na bezpečné miesto.
+
+## Riešenie problémov
+
+### Port už je obsadený
 
 ```bash
-# Development
+# Skontrola obsadených portov
+netstat -ano | findstr :3002
+
+# Zmena portu v package.json
+"dev": "next dev --turbopack -p 3003"
+```
+
+### Modul not found chyby
+
+```bash
+# Reštartovanie servera
 npm run dev
 
-# Build
-npm run build
-
-# Database
-npm run db:studio    # Prisma Studio
-npm run db:seed      # Seed data
-npm run db:migrate   # Run migrations
-
-# Linting
-npm run lint
+# Preinštalovanie závislostí
+npm install
 ```
 
-## 🔮 Budúce funkcie
+## Verzie
 
-- [ ] Triedenie a filtrovanie
-- [ ] CSV export
-- [ ] Notifikácie
-- [ ] Pro verzia
-- [ ] Affiliate odkazy
-- [ ] Pokročilé grafy
+- **v0.1.0**: Počiatočná verzia s kompaktným dizajnom
+- Port: 3002
+- Kompaktné logá (24px)
+- Optimalizované rozostupy
 
-## 🤝 Príspevky
+## Licencia
 
-1. Fork projektu
-2. Vytvorte feature branch
-3. Commit zmeny
-4. Push do branch
-5. Otvorte Pull Request
-
-## 📄 Licencia
-
-MIT License - pozri [LICENSE](LICENSE) súbor.
-
-## 🔗 Odkazy
-
-- [Polygon.io API](https://polygon.io/docs/)
-- [Next.js Dokumentácia](https://nextjs.org/docs)
-- [Prisma Dokumentácia](https://www.prisma.io/docs)
-- [Kiddobank.com](https://kiddobank.com)
-
----
-
-**Vytvorené s ❤️ pre sledovanie pre-market dát**
+MIT License
