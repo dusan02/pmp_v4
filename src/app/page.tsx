@@ -19,6 +19,7 @@ export default function HomePage() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Mock data for demonstration
   const mockStocks: StockData[] = [
@@ -44,9 +45,7 @@ export default function HomePage() {
     { ticker: 'HD', preMarketPrice: 380.40, percentChange: 0.40, marketCapDiff: 1.6, marketCap: 300 }
   ];
 
-  // Sortable data hooks
-  const { sorted: allStocksSorted, sortKey: allSortKey, ascending: allAscending, requestSort: requestAllSort } = 
-    useSortableData(stockData, "marketCap", false);
+
 
   useEffect(() => {
     // Load favorites from localStorage
@@ -55,8 +54,8 @@ export default function HomePage() {
       setFavorites(JSON.parse(savedFavorites));
     }
     
-    // Set initial data
-    setStockData(mockStocks);
+    // Fetch real data on startup
+    fetchStockData(false);
   }, []);
 
   const fetchStockData = async (refresh = false) => {
@@ -95,8 +94,67 @@ export default function HomePage() {
   };
 
   const favoriteStocks = stockData.filter(stock => favorites.includes(stock.ticker));
+  
+  // Company name mapping for search
+  const getCompanyName = (ticker: string): string => {
+    const companyNames: Record<string, string> = {
+      'NVDA': 'NVIDIA', 'MSFT': 'Microsoft', 'AAPL': 'Apple', 'AMZN': 'Amazon', 'GOOGL': 'Alphabet', 'GOOG': 'Alphabet',
+      'META': 'Meta', 'AVGO': 'Broadcom', 'BRK-B': 'Berkshire Hathaway', 'TSLA': 'Tesla', 'JPM': 'JPMorgan Chase',
+      'WMT': 'Walmart', 'LLY': 'Eli Lilly', 'ORCL': 'Oracle', 'V': 'Visa', 'MA': 'Mastercard', 'NFLX': 'Netflix',
+      'XOM': 'ExxonMobil', 'COST': 'Costco', 'JNJ': 'Johnson & Johnson', 'HD': 'Home Depot', 'PLTR': 'Palantir',
+      'PG': 'Procter & Gamble', 'BAC': 'Bank of America', 'ABBV': 'AbbVie', 'CVX': 'Chevron', 'KO': 'Coca-Cola',
+      'AMD': 'Advanced Micro Devices', 'GE': 'General Electric', 'CSCO': 'Cisco', 'TMUS': 'T-Mobile', 'WFC': 'Wells Fargo',
+      'CRM': 'Salesforce', 'PM': 'Philip Morris', 'IBM': 'IBM', 'UNH': 'UnitedHealth', 'MS': 'Morgan Stanley',
+      'GS': 'Goldman Sachs', 'INTU': 'Intuit', 'LIN': 'Linde', 'ABT': 'Abbott', 'AXP': 'American Express',
+      'BX': 'Blackstone', 'DIS': 'Disney', 'MCD': 'McDonald\'s', 'RTX': 'Raytheon', 'NOW': 'ServiceNow',
+      'MRK': 'Merck', 'CAT': 'Caterpillar', 'T': 'AT&T', 'PEP': 'PepsiCo', 'UBER': 'Uber', 'BKNG': 'Booking',
+      'TMO': 'Thermo Fisher', 'VZ': 'Verizon', 'SCHW': 'Charles Schwab', 'ISRG': 'Intuitive Surgical',
+      'QCOM': 'Qualcomm', 'C': 'Citigroup', 'TXN': 'Texas Instruments', 'BA': 'Boeing', 'BLK': 'BlackRock',
+      'GEV': 'GE Vernova', 'ACN': 'Accenture', 'SPGI': 'S&P Global', 'AMGN': 'Amgen', 'ADBE': 'Adobe',
+      'BSX': 'Boston Scientific', 'SYK': 'Stryker', 'ETN': 'Eaton', 'AMAT': 'Applied Materials', 'ANET': 'Arista Networks',
+      'NEE': 'NextEra Energy', 'DHR': 'Danaher', 'HON': 'Honeywell', 'TJX': 'TJX Companies', 'PGR': 'Progressive',
+      'GILD': 'Gilead Sciences', 'DE': 'Deere', 'PFE': 'Pfizer', 'COF': 'Capital One', 'KKR': 'KKR',
+      'PANW': 'Palo Alto Networks', 'UNP': 'Union Pacific', 'APH': 'Amphenol', 'LOW': 'Lowe\'s', 'LRCX': 'Lam Research',
+      'MU': 'Micron Technology', 'ADP': 'Automatic Data Processing', 'CMCSA': 'Comcast', 'COP': 'ConocoPhillips',
+      'KLAC': 'KLA Corporation', 'VRTX': 'Vertex Pharmaceuticals', 'MDT': 'Medtronic', 'SNPS': 'Synopsys',
+      'NKE': 'Nike', 'CRWD': 'CrowdStrike', 'ADI': 'Analog Devices', 'WELL': 'Welltower', 'CB': 'Chubb',
+      'ICE': 'Intercontinental Exchange', 'SBUX': 'Starbucks', 'TT': 'Trane Technologies', 'SO': 'Southern Company',
+      'CEG': 'Constellation Energy', 'PLD': 'Prologis', 'DASH': 'DoorDash', 'AMT': 'American Tower',
+      'MO': 'Altria', 'MMC': 'Marsh & McLennan', 'CME': 'CME Group', 'CDNS': 'Cadence Design Systems',
+      'LMT': 'Lockheed Martin', 'BMY': 'Bristol-Myers Squibb', 'WM': 'Waste Management', 'PH': 'Parker-Hannifin',
+      'COIN': 'Coinbase', 'DUK': 'Duke Energy', 'RCL': 'Royal Caribbean', 'MCO': 'Moody\'s', 'MDLZ': 'Mondelez',
+      'DELL': 'Dell Technologies', 'TDG': 'TransDigm', 'CTAS': 'Cintas', 'INTC': 'Intel', 'MCK': 'McKesson',
+      'ABNB': 'Airbnb', 'GD': 'General Dynamics', 'ORLY': 'O\'Reilly Automotive', 'APO': 'Apollo Global Management',
+      'SHW': 'Sherwin-Williams', 'HCA': 'HCA Healthcare', 'EMR': 'Emerson Electric', 'NOC': 'Northrop Grumman',
+      'MMM': '3M', 'FTNT': 'Fortinet', 'EQIX': 'Equinix', 'CI': 'Cigna', 'UPS': 'United Parcel Service',
+      'FI': 'Fiserv', 'HWM': 'Howmet Aerospace', 'AON': 'Aon', 'PNC': 'PNC Financial', 'CVS': 'CVS Health',
+      'RSG': 'Republic Services', 'AJG': 'Arthur J. Gallagher', 'ITW': 'Illinois Tool Works', 'MAR': 'Marriott',
+      'ECL': 'Ecolab', 'MSI': 'Motorola Solutions', 'USB': 'U.S. Bancorp', 'WMB': 'Williams Companies',
+      'BK': 'Bank of New York Mellon', 'CL': 'Colgate-Palmolive', 'NEM': 'Newmont', 'PYPL': 'PayPal',
+      'JCI': 'Johnson Controls', 'ZTS': 'Zoetis', 'VST': 'Vistra', 'EOG': 'EOG Resources', 'CSX': 'CSX',
+      'ELV': 'Elevance Health', 'ADSK': 'Autodesk', 'APD': 'Air Products', 'AZO': 'AutoZone', 'HLT': 'Hilton',
+      'WDAY': 'Workday', 'SPG': 'Simon Property Group', 'NSC': 'Norfolk Southern', 'KMI': 'Kinder Morgan',
+      'TEL': 'TE Connectivity', 'FCX': 'Freeport-McMoRan', 'CARR': 'Carrier Global', 'PWR': 'Quanta Services',
+      'REGN': 'Regeneron Pharmaceuticals', 'ROP': 'Roper Technologies', 'CMG': 'Chipotle Mexican Grill',
+      'DLR': 'Digital Realty Trust', 'MNST': 'Monster Beverage', 'TFC': 'Truist Financial', 'TRV': 'Travelers',
+      'AEP': 'American Electric Power', 'NXPI': 'NXP Semiconductors', 'AXON': 'Axon Enterprise', 'URI': 'United Rentals',
+      'COR': 'Cencora', 'FDX': 'FedEx', 'NDAQ': 'Nasdaq', 'AFL': 'Aflac', 'GLW': 'Corning', 'FAST': 'Fastenal',
+      'MPC': 'Marathon Petroleum', 'SLB': 'Schlumberger', 'SRE': 'Sempra Energy', 'PAYX': 'Paychex',
+      'PCAR': 'PACCAR', 'MET': 'MetLife', 'BDX': 'Becton Dickinson', 'OKE': 'ONEOK', 'DDOG': 'Datadog'
+    };
+    return companyNames[ticker] || ticker;
+  };
+
+  // Filter by search term
+  const filteredStocks = stockData.filter(stock => 
+    stock.ticker.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getCompanyName(stock.ticker).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
   const { sorted: favoriteStocksSorted, sortKey: favSortKey, ascending: favAscending, requestSort: requestFavSort } = 
     useSortableData(favoriteStocks, "marketCap", false);
+  const { sorted: allStocksSorted, sortKey: allSortKey, ascending: allAscending, requestSort: requestAllSort } = 
+    useSortableData(filteredStocks, "marketCap", false);
 
   const renderSortIcon = (key: SortKey, currentSortKey: SortKey, ascending: boolean) => {
     if (key === currentSortKey) {
@@ -113,7 +171,7 @@ export default function HomePage() {
           <span className="brand-gradient">Market</span>
           <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
         </h1>
-        <p>Pre-market percentage changes and market cap differences for S&P 500 companies</p>
+        <p>Track real-time pre-market movements of the top 200 US companies. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
         <button onClick={() => fetchStockData(false)} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh Data'}
         </button>
@@ -142,18 +200,18 @@ export default function HomePage() {
                   Market Cap&nbsp;(B)
                   {renderSortIcon("marketCap", favSortKey, favAscending)}
                 </th>
-                <th onClick={() => requestFavSort("preMarketPrice" as SortKey)} className="sortable">
-                  Pre-Market Price
-                  {renderSortIcon("preMarketPrice", favSortKey, favAscending)}
-                </th>
-                <th onClick={() => requestFavSort("percentChange" as SortKey)} className="sortable">
-                  % Change
-                  {renderSortIcon("percentChange", favSortKey, favAscending)}
-                </th>
-                <th onClick={() => requestFavSort("marketCapDiff" as SortKey)} className="sortable">
-                  Market Cap Diff (B)
-                  {renderSortIcon("marketCapDiff", favSortKey, favAscending)}
-                </th>
+                                                     <th onClick={() => requestFavSort("preMarketPrice" as SortKey)} className="sortable">
+                         Current Price ($)
+                         {renderSortIcon("preMarketPrice", favSortKey, favAscending)}
+                       </th>
+              <th onClick={() => requestFavSort("percentChange" as SortKey)} className="sortable">
+                % Change
+                {renderSortIcon("percentChange", favSortKey, favAscending)}
+              </th>
+                                     <th onClick={() => requestFavSort("marketCapDiff" as SortKey)} className="sortable">
+                         Market Cap Diff (B $)
+                         {renderSortIcon("marketCapDiff", favSortKey, favAscending)}
+                       </th>
                 <th>Favorite</th>
               </tr>
             </thead>
@@ -170,18 +228,20 @@ export default function HomePage() {
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
                   <td>{formatBillions(stock.marketCap)}</td>
-                  <td>${stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
+                  <td>{stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
                   <td className={stock.percentChange >= 0 ? 'positive' : 'negative'}>
                     {stock.percentChange >= 0 ? '+' : ''}{stock.percentChange?.toFixed(2) || '0.00'}%
                   </td>
-                  <td>{stock.marketCapDiff >= 0 ? '+' : ''}${stock.marketCapDiff?.toFixed(2) || '0.00'}B</td>
+                  <td className={stock.marketCapDiff >= 0 ? 'positive' : 'negative'}>
+                    {stock.marketCapDiff >= 0 ? '+' : ''}{stock.marketCapDiff?.toFixed(2) || '0.00'}
+                  </td>
                   <td>
                     <button 
-                      className="favorite-btn" 
+                      className={`favorite-btn ${favorites.includes(stock.ticker) ? 'favorited' : ''}`}
                       onClick={() => toggleFavorite(stock.ticker)}
-                      title="Remove from favorites"
+                      title={favorites.includes(stock.ticker) ? "Remove from favorites" : "Add to favorites"}
                     >
-                      ⭐
+                      {favorites.includes(stock.ticker) ? '★' : '☆'}
                     </button>
                   </td>
                 </tr>
@@ -192,7 +252,18 @@ export default function HomePage() {
       )}
 
       <section className="all-stocks">
-        <h2 data-icon="📊">All Stocks</h2>
+        <div className="section-header">
+          <h2 data-icon="📊">All Stocks</h2>
+          <div className="search-container">
+            <input
+              type="text"
+              placeholder="Find company"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+          </div>
+        </div>
         <table>
           <thead>
             <tr>
@@ -205,18 +276,18 @@ export default function HomePage() {
                 Market Cap&nbsp;(B)
                 {renderSortIcon("marketCap", allSortKey, allAscending)}
               </th>
-              <th onClick={() => requestAllSort("preMarketPrice" as SortKey)} className="sortable">
-                Pre-Market Price
-                {renderSortIcon("preMarketPrice", allSortKey, allAscending)}
-              </th>
+                                   <th onClick={() => requestAllSort("preMarketPrice" as SortKey)} className="sortable">
+                       Current Price ($)
+                       {renderSortIcon("preMarketPrice", allSortKey, allAscending)}
+                     </th>
               <th onClick={() => requestAllSort("percentChange" as SortKey)} className="sortable">
                 % Change
                 {renderSortIcon("percentChange", allSortKey, allAscending)}
               </th>
-              <th onClick={() => requestAllSort("marketCapDiff" as SortKey)} className="sortable">
-                Market Cap Diff (B)
-                {renderSortIcon("marketCapDiff", allSortKey, allAscending)}
-              </th>
+                                   <th onClick={() => requestAllSort("marketCapDiff" as SortKey)} className="sortable">
+                       Market Cap Diff (B $)
+                       {renderSortIcon("marketCapDiff", allSortKey, allAscending)}
+                     </th>
               <th>Favorite</th>
             </tr>
           </thead>
@@ -235,18 +306,20 @@ export default function HomePage() {
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
                   <td>{formatBillions(stock.marketCap)}</td>
-                  <td>${stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
+                  <td>{stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
                   <td className={stock.percentChange >= 0 ? 'positive' : 'negative'}>
                     {stock.percentChange >= 0 ? '+' : ''}{stock.percentChange?.toFixed(2) || '0.00'}%
                   </td>
-                  <td>{stock.marketCapDiff >= 0 ? '+' : ''}${stock.marketCapDiff?.toFixed(2) || '0.00'}B</td>
+                  <td className={stock.marketCapDiff >= 0 ? 'positive' : 'negative'}>
+                    {stock.marketCapDiff >= 0 ? '+' : ''}{stock.marketCapDiff?.toFixed(2) || '0.00'}
+                  </td>
                   <td>
                     <button 
-                      className="favorite-btn" 
+                      className={`favorite-btn ${isFavorite ? 'favorited' : ''}`}
                       onClick={() => toggleFavorite(stock.ticker)}
                       title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                     >
-                      {isFavorite ? '⭐' : '☆'}
+                      {isFavorite ? '★' : '☆'}
                     </button>
                   </td>
                 </tr>

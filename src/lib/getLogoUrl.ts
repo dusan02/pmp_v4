@@ -38,7 +38,7 @@ const tickerDomains: Record<string, string> = {
   CSCO: "cisco.com",
   TMUS: "t-mobile.com",
   WFC: "wellsfargo.com",
-  TMFC: "tmf.com",
+  
   CRM: "salesforce.com",
   PM: "phillipmorris.com",
   IBM: "ibm.com",
