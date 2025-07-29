@@ -5,6 +5,7 @@ import { ChevronUp, ChevronDown, Download, Table } from 'lucide-react';
 import { useSortableData } from '@/hooks/useSortableData';
 import { formatBillions } from '@/lib/format';
 import { getLogoUrl } from '@/lib/getLogoUrl';
+import { useFavorites } from '@/hooks/useFavorites';
 
 interface StockData {
   ticker: string;
@@ -18,10 +19,12 @@ type SortKey = 'ticker' | 'marketCap' | 'preMarketPrice' | 'percentChange' | 'ma
 
 export default function HomePage() {
   const [stockData, setStockData] = useState<StockData[]>([]);
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Use database-backed favorites
+  const { favorites, toggleFavorite, isFavorite } = useFavorites('default');
 
 
   // Mock data for demonstration
@@ -37,12 +40,6 @@ export default function HomePage() {
   ];
 
   useEffect(() => {
-    // Load favorites from localStorage
-    const savedFavorites = localStorage.getItem('premarket-favorites');
-    if (savedFavorites) {
-      setFavorites(JSON.parse(savedFavorites));
-    }
-    
     // Fetch real data on startup
     fetchStockData(false);
   }, []);
@@ -75,16 +72,7 @@ export default function HomePage() {
     }
   };
 
-  const toggleFavorite = (ticker: string) => {
-    const newFavorites = favorites.includes(ticker)
-      ? favorites.filter(t => t !== ticker)
-      : [...favorites, ticker];
-    
-    setFavorites(newFavorites);
-    localStorage.setItem('premarket-favorites', JSON.stringify(newFavorites));
-  };
-
-  const favoriteStocks = stockData.filter(stock => favorites.includes(stock.ticker));
+  const favoriteStocks = stockData.filter(stock => favorites.some(fav => fav.ticker === stock.ticker));
   
   // Company name mapping for search
   const getCompanyName = (ticker: string): string => {
@@ -285,11 +273,11 @@ export default function HomePage() {
                   </td>
                   <td>
                     <button 
-                      className={`favorite-btn ${favorites.includes(stock.ticker) ? 'favorited' : ''}`}
+                      className={`favorite-btn ${isFavorite(stock.ticker) ? 'favorited' : ''}`}
                       onClick={() => toggleFavorite(stock.ticker)}
-                      title={favorites.includes(stock.ticker) ? "Remove from favorites" : "Add to favorites"}
+                      title={isFavorite(stock.ticker) ? "Remove from favorites" : "Add to favorites"}
                     >
-                      {favorites.includes(stock.ticker) ? '★' : '☆'}
+                      {isFavorite(stock.ticker) ? '★' : '☆'}
                     </button>
                   </td>
                 </tr>
@@ -345,7 +333,7 @@ export default function HomePage() {
           </thead>
           <tbody>
             {allStocksSorted.map((stock) => {
-              const isFavorite = favorites.includes(stock.ticker);
+              const isFavorited = isFavorite(stock.ticker);
               return (
                 <tr key={stock.ticker}>
                   <td>
@@ -375,11 +363,11 @@ export default function HomePage() {
                   </td>
                   <td>
                     <button 
-                      className={`favorite-btn ${isFavorite ? 'favorited' : ''}`}
+                      className={`favorite-btn ${isFavorited ? 'favorited' : ''}`}
                       onClick={() => toggleFavorite(stock.ticker)}
-                      title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                      title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
                     >
-                      {isFavorite ? '★' : '☆'}
+                      {isFavorited ? '★' : '☆'}
                     </button>
                   </td>
                 </tr>

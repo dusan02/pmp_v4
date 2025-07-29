@@ -1,4 +1,5 @@
 import { getCachedData, setCachedData, getCacheStatus, setCacheStatus, CACHE_KEYS } from './redis';
+import { dbHelpers, runTransaction, initializeDatabase } from './database';
 
 interface CachedStockData {
   ticker: string;
@@ -45,6 +46,57 @@ class StockDataCache {
     'AEM', 'DB', 'NU', 'CNI', 'DEO', 'NWG', 'AMX', 'MFC',
     'E', 'WCN', 'SU', 'TRP', 'PBR', 'HMC', 'GRMN', 'CCEP', 'ALC', 'TAK'
   ];
+
+  // Company names mapping
+  private readonly companyNames: Record<string, string> = {
+    'NVDA': 'NVIDIA', 'MSFT': 'Microsoft', 'AAPL': 'Apple', 'AMZN': 'Amazon', 'GOOGL': 'Alphabet', 'GOOG': 'Alphabet',
+    'META': 'Meta Platforms', 'AVGO': 'Broadcom', 'BRK.A': 'Berkshire Hathaway', 'BRK.B': 'Berkshire Hathaway', 'TSLA': 'Tesla',
+    'JPM': 'JPMorgan Chase', 'WMT': 'Walmart', 'LLY': 'Eli Lilly', 'ORCL': 'Oracle', 'V': 'Visa', 'MA': 'Mastercard',
+    'NFLX': 'Netflix', 'XOM': 'Exxon Mobil', 'COST': 'Costco', 'JNJ': 'Johnson & Johnson', 'HD': 'Home Depot', 'PLTR': 'Palantir',
+    'PG': 'Procter & Gamble', 'BAC': 'Bank of America', 'ABBV': 'AbbVie', 'CVX': 'Chevron', 'KO': 'Coca-Cola', 'AMD': 'Advanced Micro Devices',
+    'GE': 'General Electric', 'CSCO': 'Cisco Systems', 'TMUS': 'T-Mobile US', 'WFC': 'Wells Fargo', 'CRM': 'Salesforce', 'PM': 'Philip Morris',
+    'IBM': 'IBM', 'UNH': 'UnitedHealth Group', 'MS': 'Morgan Stanley', 'GS': 'Goldman Sachs', 'INTU': 'Intuit', 'LIN': 'Linde',
+    'ABT': 'Abbott Laboratories', 'AXP': 'American Express', 'BX': 'Blackstone', 'DIS': 'Walt Disney', 'MCD': 'McDonald\'s', 'RTX': 'Raytheon Technologies',
+    'NOW': 'ServiceNow', 'MRK': 'Merck', 'CAT': 'Caterpillar', 'T': 'AT&T', 'PEP': 'PepsiCo', 'UBER': 'Uber Technologies',
+    'BKNG': 'Booking Holdings', 'TMO': 'Thermo Fisher Scientific', 'VZ': 'Verizon', 'SCHW': 'Charles Schwab', 'ISRG': 'Intuitive Surgical', 'QCOM': 'Qualcomm',
+    'C': 'Citigroup', 'TXN': 'Texas Instruments', 'BA': 'Boeing', 'BLK': 'BlackRock', 'ACN': 'Accenture', 'SPGI': 'S&P Global',
+    'AMGN': 'Amgen', 'ADBE': 'Adobe', 'BSX': 'Boston Scientific', 'SYK': 'Stryker', 'ETN': 'Eaton', 'AMAT': 'Applied Materials',
+    'ANET': 'Arista Networks', 'NEE': 'NextEra Energy', 'DHR': 'Danaher', 'HON': 'Honeywell', 'TJX': 'TJX Companies', 'PGR': 'Progressive',
+    'GILD': 'Gilead Sciences', 'DE': 'Deere & Company', 'PFE': 'Pfizer', 'COF': 'Capital One', 'KKR': 'KKR & Co', 'PANW': 'Palo Alto Networks',
+    'UNP': 'Union Pacific', 'APH': 'Amphenol', 'LOW': 'Lowe\'s', 'LRCX': 'Lam Research', 'MU': 'Micron Technology', 'ADP': 'Automatic Data Processing',
+    'CMCSA': 'Comcast', 'COP': 'ConocoPhillips', 'KLAC': 'KLA Corporation', 'VRTX': 'Vertex Pharmaceuticals', 'MDT': 'Medtronic', 'SNPS': 'Synopsys',
+    'NKE': 'Nike', 'CRWD': 'CrowdStrike', 'ADI': 'Analog Devices', 'WELL': 'Welltower', 'CB': 'Chubb', 'ICE': 'Intercontinental Exchange',
+    'SBUX': 'Starbucks', 'TT': 'Trane Technologies', 'SO': 'Southern Company', 'CEG': 'Constellation Energy', 'PLD': 'Prologis', 'DASH': 'DoorDash',
+    'AMT': 'American Tower', 'MO': 'Altria Group', 'MMC': 'Marsh & McLennan', 'CME': 'CME Group', 'CDNS': 'Cadence Design Systems', 'LMT': 'Lockheed Martin',
+    'BMY': 'Bristol-Myers Squibb', 'WM': 'Waste Management', 'PH': 'Parker-Hannifin', 'COIN': 'Coinbase Global', 'DUK': 'Duke Energy', 'RCL': 'Royal Caribbean',
+    'MCO': 'Moody\'s', 'MDLZ': 'Mondelez International', 'DELL': 'Dell Technologies', 'TDG': 'TransDigm Group', 'CTAS': 'Cintas', 'INTC': 'Intel',
+    'MCK': 'McKesson', 'ABNB': 'Airbnb', 'GD': 'General Dynamics', 'ORLY': 'O\'Reilly Automotive', 'APO': 'Apollo Global Management', 'SHW': 'Sherwin-Williams',
+    'HCA': 'HCA Healthcare', 'EMR': 'Emerson Electric', 'NOC': 'Northrop Grumman', 'MMM': '3M', 'FTNT': 'Fortinet', 'EQIX': 'Equinix',
+    'CI': 'Cigna', 'UPS': 'United Parcel Service', 'FI': 'Fiserv', 'HWM': 'Howmet Aerospace', 'AON': 'Aon', 'PNC': 'PNC Financial Services',
+    'CVS': 'CVS Health', 'RSG': 'Republic Services', 'AJG': 'Arthur J. Gallagher', 'ITW': 'Illinois Tool Works', 'MAR': 'Marriott International', 'ECL': 'Ecolab',
+    'MSI': 'Motorola Solutions', 'USB': 'U.S. Bancorp', 'WMB': 'Williams Companies', 'BK': 'Bank of New York Mellon', 'CL': 'Colgate-Palmolive', 'NEM': 'Newmont',
+    'PYPL': 'PayPal', 'JCI': 'Johnson Controls', 'ZTS': 'Zoetis', 'VST': 'Vistra', 'EOG': 'EOG Resources', 'CSX': 'CSX',
+    'ELV': 'Elevance Health', 'ADSK': 'Autodesk', 'APD': 'Air Products and Chemicals', 'AZO': 'AutoZone', 'HLT': 'Hilton Worldwide', 'WDAY': 'Workday',
+    'SPG': 'Simon Property Group', 'NSC': 'Norfolk Southern', 'KMI': 'Kinder Morgan', 'TEL': 'TE Connectivity', 'FCX': 'Freeport-McMoRan', 'CARR': 'Carrier Global',
+    'PWR': 'Quanta Services', 'REGN': 'Regeneron Pharmaceuticals', 'ROP': 'Roper Technologies', 'CMG': 'Chipotle Mexican Grill', 'DLR': 'Digital Realty Trust', 'MNST': 'Monster Beverage',
+    'TFC': 'Truist Financial', 'TRV': 'Travelers Companies', 'AEP': 'American Electric Power', 'NXPI': 'NXP Semiconductors', 'AXON': 'Axon Enterprise', 'URI': 'United Rentals',
+    'COR': 'Cencora', 'FDX': 'FedEx', 'NDAQ': 'Nasdaq', 'AFL': 'Aflac', 'GLW': 'Corning', 'FAST': 'Fastenal',
+    'MPC': 'Marathon Petroleum', 'SLB': 'Schlumberger', 'SRE': 'Sempra Energy', 'PAYX': 'Paychex', 'PCAR': 'PACCAR', 'MET': 'MetLife',
+    'BDX': 'Becton Dickinson', 'OKE': 'ONEOK', 'DDOG': 'Datadog',
+    // International companies
+    'TSM': 'Taiwan Semiconductor', 'SAP': 'SAP SE', 'ASML': 'ASML Holding', 'BABA': 'Alibaba Group', 'TM': 'Toyota Motor', 'AZN': 'AstraZeneca',
+    'HSBC': 'HSBC Holdings', 'NVS': 'Novartis', 'SHEL': 'Shell', 'HDB': 'HDFC Bank', 'RY': 'Royal Bank of Canada', 'NVO': 'Novo Nordisk',
+    'ARM': 'ARM Holdings', 'SHOP': 'Shopify', 'MUFG': 'Mitsubishi UFJ Financial', 'PDD': 'Pinduoduo', 'UL': 'Unilever', 'SONY': 'Sony Group',
+    'TTE': 'TotalEnergies', 'BHP': 'BHP Group', 'SAN': 'Banco Santander', 'TD': 'Toronto-Dominion Bank', 'SPOT': 'Spotify Technology', 'UBS': 'UBS Group',
+    'IBN': 'ICICI Bank', 'SNY': 'Sanofi', 'BUD': 'Anheuser-Busch InBev', 'BTI': 'British American Tobacco', 'BN': 'Danone', 'SMFG': 'Sumitomo Mitsui Financial',
+    'ENB': 'Enbridge', 'RELX': 'RELX Group', 'TRI': 'Thomson Reuters', 'RACE': 'Ferrari', 'BBVA': 'Banco Bilbao Vizcaya', 'SE': 'Sea Limited',
+    'BP': 'BP', 'NTES': 'NetEase', 'BMO': 'Bank of Montreal', 'RIO': 'Rio Tinto', 'GSK': 'GlaxoSmithKline', 'MFG': 'Mizuho Financial',
+    'INFY': 'Infosys', 'CP': 'Canadian Pacific Railway', 'BCS': 'Barclays', 'NGG': 'National Grid', 'BNS': 'Bank of Nova Scotia', 'ING': 'ING Group',
+    'EQNR': 'Equinor', 'CM': 'Canadian Imperial Bank', 'CNQ': 'Canadian Natural Resources', 'LYG': 'Lloyds Banking Group', 'AEM': 'Agnico Eagle Mines', 'DB': 'Deutsche Bank',
+    'NU': 'Nu Holdings', 'CNI': 'Canadian National Railway', 'DEO': 'Diageo', 'NWG': 'NatWest Group', 'AMX': 'America Movil', 'MFC': 'Manulife Financial',
+    'E': 'Eni', 'WCN': 'Waste Connections', 'SU': 'Suncor Energy', 'TRP': 'TC Energy', 'PBR': 'Petrobras', 'HMC': 'Honda Motor',
+    'GRMN': 'Garmin', 'CCEP': 'Coca-Cola Europacific Partners', 'ALC': 'Alcon', 'TAK': 'Takeda Pharmaceutical'
+  };
 
   // Share counts for market cap calculation - Updated for 98% accuracy with Finviz
   private readonly shareCounts: Record<string, number> = {
@@ -124,6 +176,8 @@ class StockDataCache {
   };
 
   constructor() {
+    // Initialize database
+    initializeDatabase();
     this.startBackgroundUpdates();
   }
 
@@ -185,7 +239,7 @@ class StockDataCache {
             const finalMarketCap = marketCap > 0 ? marketCap / 1_000_000_000 : (currentPrice * shares) / 1_000_000_000;
             const marketCapDiff = (currentPrice - prevClose) * (shares || this.shareCounts[ticker] || 1000000000) / 1_000_000_000;
 
-            return {
+            const stockData = {
               ticker,
               preMarketPrice: Math.round(currentPrice * 100) / 100,
               closePrice: Math.round(prevClose * 100) / 100,
@@ -194,6 +248,35 @@ class StockDataCache {
               marketCap: Math.round(finalMarketCap * 100) / 100,
               lastUpdated: new Date()
             };
+
+            // Save to database
+            try {
+              const companyName = this.getCompanyName(ticker);
+              const shareCount = shares || this.shareCounts[ticker] || 1000000000;
+              
+              runTransaction(() => {
+                // Update stock info
+                dbHelpers.upsertStock.run(
+                  ticker,
+                  companyName,
+                  finalMarketCap * 1_000_000_000, // Convert back to actual market cap
+                  shareCount,
+                  new Date().toISOString()
+                );
+
+                // Add price history
+                dbHelpers.addPriceHistory.run(
+                  ticker,
+                  currentPrice,
+                  snapshotData.ticker?.day?.v || 0, // Volume
+                  new Date().toISOString()
+                );
+              });
+            } catch (dbError) {
+              console.error(`Database error for ${ticker}:`, dbError);
+            }
+
+            return stockData;
 
           } catch (error) {
             console.error(`Error processing ${ticker}:`, error);
@@ -273,6 +356,10 @@ class StockDataCache {
 
   getStock(ticker: string): CachedStockData | null {
     return this.cache.get(ticker) || null;
+  }
+
+  getCompanyName(ticker: string): string {
+    return this.companyNames[ticker] || ticker;
   }
 
   async getCacheStatus(): Promise<{ count: number; lastUpdated: Date | null; isUpdating: boolean }> {

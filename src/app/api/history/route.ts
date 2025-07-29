@@ -1,35 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { dbHelpers } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const ticker = searchParams.get('ticker');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '100');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
 
     if (!ticker) {
       return NextResponse.json(
-        { error: 'Ticker parameter is required' },
+        { error: 'ticker parameter is required' },
         { status: 400 }
       );
     }
 
-    const history = await prisma.priceSnapshot.findMany({
-      where: {
-        ticker: ticker.toUpperCase()
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: limit
+    let history;
+    
+    if (startDate && endDate) {
+      // Get history for specific date range
+      history = dbHelpers.getPriceHistoryRange.all(ticker, startDate, endDate);
+    } else {
+      // Get recent history
+      history = dbHelpers.getPriceHistory.all(ticker, limit);
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: history,
+      count: history.length,
+      ticker
     });
 
-    return NextResponse.json(history);
-
   } catch (error) {
-    console.error('History API Error:', error);
+    console.error('Error fetching price history:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch price history' },
       { status: 500 }
     );
   }
