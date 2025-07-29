@@ -95,6 +95,26 @@ body{font-family:var(--font-sans);background:var(--clr-bg);color:var(--clr-text)
   margin-right:auto;
   font-weight:400;
 }
+
+.header-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.header-actions button {
+  min-width: 140px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
 button{
   background:var(--clr-primary);
   color:#fff;
@@ -286,6 +306,48 @@ table th:nth-child(7), table td:nth-child(7) { width: 7%; text-align: center; } 
   color: #4a5568;
   font-weight: 400;
 }
+
+.export-btn {
+  background: #217346;
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.export-btn::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.export-btn:hover {
+  background: #1e5f3d;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 115, 70, 0.3);
+}
+
+.export-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(33, 115, 70, 0.3);
+}
+
+
 
 /* === RESPONSIVE ========================================= */
 @media(max-width:640px){

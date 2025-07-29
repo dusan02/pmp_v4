@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSortableData, SortKey } from '@/hooks/useSortableData';
-import { ChevronUp, ChevronDown } from 'lucide-react';
-import { getLogoUrl } from '@/lib/getLogoUrl';
+import { ChevronUp, ChevronDown, Download, Table } from 'lucide-react';
+import { useSortableData } from '@/hooks/useSortableData';
 import { formatBillions } from '@/lib/format';
+import { getLogoUrl } from '@/lib/getLogoUrl';
 
 interface StockData {
   ticker: string;
@@ -14,6 +14,8 @@ interface StockData {
   marketCap: number;
 }
 
+type SortKey = 'ticker' | 'marketCap' | 'preMarketPrice' | 'percentChange' | 'marketCapDiff';
+
 export default function HomePage() {
   const [stockData, setStockData] = useState<StockData[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -21,31 +23,18 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+
   // Mock data for demonstration
   const mockStocks: StockData[] = [
-    { ticker: 'AAPL', preMarketPrice: 150.25, percentChange: 1.18, marketCapDiff: 2.5, marketCap: 3500 },
-    { ticker: 'MSFT', preMarketPrice: 320.75, percentChange: 0.80, marketCapDiff: 1.8, marketCap: 3200 },
-    { ticker: 'GOOGL', preMarketPrice: 2750.00, percentChange: 1.08, marketCapDiff: 3.2, marketCap: 2800 },
-    { ticker: 'AMZN', preMarketPrice: 135.80, percentChange: 1.19, marketCapDiff: 2.1, marketCap: 1800 },
-    { ticker: 'NVDA', preMarketPrice: 450.25, percentChange: 1.00, marketCapDiff: 4.5, marketCap: 1200 },
-    { ticker: 'META', preMarketPrice: 380.50, percentChange: 1.41, marketCapDiff: 2.8, marketCap: 1100 },
-    { ticker: 'TSLA', preMarketPrice: 245.75, percentChange: 1.51, marketCapDiff: 3.6, marketCap: 800 },
-    { ticker: 'BRK-B', preMarketPrice: 365.20, percentChange: 0.66, marketCapDiff: 1.2, marketCap: 900 },
-    { ticker: 'LLY', preMarketPrice: 890.50, percentChange: 0.60, marketCapDiff: 1.8, marketCap: 700 },
-    { ticker: 'TSM', preMarketPrice: 125.80, percentChange: 1.04, marketCapDiff: 2.3, marketCap: 600 },
-    { ticker: 'V', preMarketPrice: 280.40, percentChange: 0.54, marketCapDiff: 1.5, marketCap: 550 },
-    { ticker: 'UNH', preMarketPrice: 520.30, percentChange: 0.31, marketCapDiff: 1.1, marketCap: 500 },
-    { ticker: 'XOM', preMarketPrice: 105.60, percentChange: 0.76, marketCapDiff: 1.9, marketCap: 450 },
-    { ticker: 'JNJ', preMarketPrice: 165.20, percentChange: 0.43, marketCapDiff: 1.3, marketCap: 400 },
-    { ticker: 'WMT', preMarketPrice: 68.90, percentChange: 0.73, marketCapDiff: 2.2, marketCap: 520 },
-    { ticker: 'JPM', preMarketPrice: 185.30, percentChange: 0.60, marketCapDiff: 2.8, marketCap: 480 },
-    { ticker: 'PG', preMarketPrice: 155.80, percentChange: 0.58, marketCapDiff: 1.7, marketCap: 380 },
-    { ticker: 'MA', preMarketPrice: 420.50, percentChange: 0.53, marketCapDiff: 2.1, marketCap: 350 },
-    { ticker: 'AVGO', preMarketPrice: 890.20, percentChange: 0.52, marketCapDiff: 1.4, marketCap: 320 },
-    { ticker: 'HD', preMarketPrice: 380.40, percentChange: 0.40, marketCapDiff: 1.6, marketCap: 300 }
+    { ticker: 'NVDA', preMarketPrice: 176.36, percentChange: -0.22, marketCapDiff: -9.52, marketCap: 4231 },
+    { ticker: 'MSFT', preMarketPrice: 512.09, percentChange: -0.08, marketCapDiff: -3.06, marketCap: 3818 },
+    { ticker: 'AAPL', preMarketPrice: 212.14, percentChange: -0.89, marketCapDiff: -28.60, marketCap: 3194 },
+    { ticker: 'AMZN', preMarketPrice: 231.47, percentChange: -0.57, marketCapDiff: -14.01, marketCap: 2457 },
+    { ticker: 'GOOGL', preMarketPrice: 195.13, percentChange: 1.32, marketCapDiff: 14.84, marketCap: 2336 },
+    { ticker: 'META', preMarketPrice: 709.81, percentChange: -1.09, marketCapDiff: -16.98, marketCap: 1792 },
+    { ticker: 'AVGO', preMarketPrice: 298.67, percentChange: 1.48, marketCapDiff: 20.55, marketCap: 1365 },
+    { ticker: 'BRK-B', preMarketPrice: 380.40, percentChange: 0.40, marketCapDiff: 1.6, marketCap: 300 }
   ];
-
-
 
   useEffect(() => {
     // Load favorites from localStorage
@@ -156,11 +145,36 @@ export default function HomePage() {
   const { sorted: allStocksSorted, sortKey: allSortKey, ascending: allAscending, requestSort: requestAllSort } = 
     useSortableData(filteredStocks, "marketCap", false);
 
+
+
   const renderSortIcon = (key: SortKey, currentSortKey: SortKey, ascending: boolean) => {
     if (key === currentSortKey) {
       return ascending ? <ChevronUp size={14} className="inline ml-1" /> : <ChevronDown size={14} className="inline ml-1" />;
     }
     return null;
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Ticker', 'Company', 'Market Cap (B)', 'Current Price ($)', '% Change', 'Market Cap Diff (B $)'];
+    const csvContent = [
+      headers.join(','),
+      ...allStocksSorted.map(stock => [
+        stock.ticker,
+        getCompanyName(stock.ticker),
+        stock.marketCap,
+        stock.preMarketPrice?.toFixed(2) || '0.00',
+        stock.percentChange?.toFixed(2) || '0.00',
+        stock.marketCapDiff?.toFixed(2) || '0.00'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `premarket-stocks-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
@@ -172,9 +186,15 @@ export default function HomePage() {
           <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
         </h1>
         <p>Track real-time pre-market movements of the top 200 US companies. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
-        <button onClick={() => fetchStockData(false)} disabled={loading}>
-          {loading ? 'Refreshing...' : 'Refresh Data'}
-        </button>
+        <div className="header-actions">
+          <button onClick={() => fetchStockData(false)} disabled={loading}>
+            {loading ? 'Refreshing...' : 'Refresh Data'}
+          </button>
+          <button onClick={exportToCSV} className="export-btn">
+            <Table size={16} />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -200,18 +220,18 @@ export default function HomePage() {
                   Market Cap&nbsp;(B)
                   {renderSortIcon("marketCap", favSortKey, favAscending)}
                 </th>
-                                                     <th onClick={() => requestFavSort("preMarketPrice" as SortKey)} className="sortable">
-                         Current Price ($)
-                         {renderSortIcon("preMarketPrice", favSortKey, favAscending)}
-                       </th>
-              <th onClick={() => requestFavSort("percentChange" as SortKey)} className="sortable">
-                % Change
-                {renderSortIcon("percentChange", favSortKey, favAscending)}
-              </th>
-                                     <th onClick={() => requestFavSort("marketCapDiff" as SortKey)} className="sortable">
-                         Market Cap Diff (B $)
-                         {renderSortIcon("marketCapDiff", favSortKey, favAscending)}
-                       </th>
+                <th onClick={() => requestFavSort("preMarketPrice" as SortKey)} className="sortable">
+                  Current Price ($)
+                  {renderSortIcon("preMarketPrice", favSortKey, favAscending)}
+                </th>
+                <th onClick={() => requestFavSort("percentChange" as SortKey)} className="sortable">
+                  % Change
+                  {renderSortIcon("percentChange", favSortKey, favAscending)}
+                </th>
+                <th onClick={() => requestFavSort("marketCapDiff" as SortKey)} className="sortable">
+                  Market Cap Diff (B $)
+                  {renderSortIcon("marketCapDiff", favSortKey, favAscending)}
+                </th>
                 <th>Favorite</th>
               </tr>
             </thead>
@@ -264,6 +284,9 @@ export default function HomePage() {
             />
           </div>
         </div>
+
+
+
         <table>
           <thead>
             <tr>
@@ -276,18 +299,18 @@ export default function HomePage() {
                 Market Cap&nbsp;(B)
                 {renderSortIcon("marketCap", allSortKey, allAscending)}
               </th>
-                                   <th onClick={() => requestAllSort("preMarketPrice" as SortKey)} className="sortable">
-                       Current Price ($)
-                       {renderSortIcon("preMarketPrice", allSortKey, allAscending)}
-                     </th>
+              <th onClick={() => requestAllSort("preMarketPrice" as SortKey)} className="sortable">
+                Current Price ($)
+                {renderSortIcon("preMarketPrice", allSortKey, allAscending)}
+              </th>
               <th onClick={() => requestAllSort("percentChange" as SortKey)} className="sortable">
                 % Change
                 {renderSortIcon("percentChange", allSortKey, allAscending)}
               </th>
-                                   <th onClick={() => requestAllSort("marketCapDiff" as SortKey)} className="sortable">
-                       Market Cap Diff (B $)
-                       {renderSortIcon("marketCapDiff", allSortKey, allAscending)}
-                     </th>
+              <th onClick={() => requestAllSort("marketCapDiff" as SortKey)} className="sortable">
+                Market Cap Diff (B $)
+                {renderSortIcon("marketCapDiff", allSortKey, allAscending)}
+              </th>
               <th>Favorite</th>
             </tr>
           </thead>
@@ -327,6 +350,8 @@ export default function HomePage() {
             })}
           </tbody>
         </table>
+
+
       </section>
 
       <div className="footer">
