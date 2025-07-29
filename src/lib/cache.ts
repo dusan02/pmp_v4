@@ -15,7 +15,7 @@ class StockDataCache {
 
   // Top 200 US companies by market cap
   private readonly TICKERS = [
-    'NVDA', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'GOOG', 'META', 'AVGO', 'BRK-B', 'TSLA',
+    'NVDA', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'GOOG', 'META', 'AVGO', 'BRK.A', 'TSLA',
     'JPM', 'WMT', 'LLY', 'ORCL', 'V', 'MA', 'NFLX', 'XOM', 'COST', 'JNJ', 'HD', 'PLTR',
     'PG', 'BAC', 'ABBV', 'CVX', 'KO', 'AMD', 'GE', 'CSCO', 'TMUS', 'WFC', 'CRM',
     'PM', 'IBM', 'UNH', 'MS', 'GS', 'INTU', 'LIN', 'ABT', 'AXP', 'BX', 'DIS', 'MCD',
@@ -32,7 +32,7 @@ class StockDataCache {
     'ELV', 'ADSK', 'APD', 'AZO', 'HLT', 'WDAY', 'SPG', 'NSC', 'KMI', 'TEL', 'FCX',
     'CARR', 'PWR', 'REGN', 'ROP', 'CMG', 'DLR', 'MNST', 'TFC', 'TRV', 'AEP', 'NXPI',
     'AXON', 'URI', 'COR', 'FDX', 'NDAQ', 'AFL', 'GLW', 'FAST', 'MPC', 'SLB', 'SRE',
-    'PAYX', 'PCAR', 'MET', 'BDX', 'OKE', 'DDOG'
+    'PAYX', 'PCAR', 'MET', 'BDX', 'OKE', 'DDOG', 'BRK.B'
   ];
 
   // Share counts for market cap calculation - Updated for 98% accuracy with Finviz
@@ -40,7 +40,7 @@ class StockDataCache {
     // Top 10 by market cap - Finviz verified
     'NVDA': 24400000000, 'MSFT': 7440000000, 'AAPL': 15400000000, 'AMZN': 10400000000,
     'GOOGL': 12500000000, 'GOOG': 12500000000, 'META': 2520000000, 'AVGO': 4700000000,
-    'BRK-B': 1400000000, 'TSLA': 3180000000,
+    'BRK.A': 1400000000, 'TSLA': 3180000000, 'BRK.B': 1400000000,
     
     // Next 20 - Finviz verified
     'JPM': 2900000000, 'WMT': 8000000000, 'LLY': 950000000, 'ORCL': 2800000000,
