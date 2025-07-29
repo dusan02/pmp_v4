@@ -251,7 +251,7 @@ class StockDataCache {
 
             // Save to database
             try {
-              const companyName = this.getCompanyName(ticker);
+              const companyName = this.companyNames[ticker] || ticker;
               const shareCount = shares || this.shareCounts[ticker] || 1000000000;
               
               runTransaction(() => {

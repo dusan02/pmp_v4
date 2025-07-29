@@ -106,13 +106,13 @@ body{font-family:var(--font-sans);background:var(--clr-bg);color:var(--clr-text)
 
 .header-actions button {
   min-width: 140px;
-  height: 40px;
+  height: 48px; /* Fixed height for all buttons */
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   border-radius: var(--radius);
-  font-size: 0.875rem;
+  font-size: 1rem; /* Consistent font size */
   font-weight: 600;
 }
 button{
@@ -453,9 +453,11 @@ table th:nth-child(8), table td:nth-child(8) { width: 10%; text-align: center; }
   border: none;
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
-  font-size: 0.875rem;
+  font-size: 1rem; /* Match other buttons */
   cursor: pointer;
   transition: background-color 0.2s;
+  height: 48px; /* Match other buttons */
+  min-width: 140px; /* Match other buttons */
 }
 
 .logout-btn:hover {
@@ -475,6 +477,8 @@ table th:nth-child(8), table td:nth-child(8) { width: 10%; text-align: center; }
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
+  height: 48px; /* Match other buttons */
+  min-width: 140px; /* Match other buttons */
 }
 
 .signin-btn:hover {
