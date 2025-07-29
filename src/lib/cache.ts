@@ -1,5 +1,6 @@
 import { getCachedData, setCachedData, getCacheStatus, setCacheStatus, CACHE_KEYS } from './redis';
 import { dbHelpers, runTransaction, initializeDatabase } from './database';
+import { createBackgroundService } from './backgroundService';
 
 interface CachedStockData {
   ticker: string;
@@ -178,6 +179,10 @@ class StockDataCache {
   constructor() {
     // Initialize database
     initializeDatabase();
+    
+    // Initialize background service
+    createBackgroundService(this);
+    
     this.startBackgroundUpdates();
   }
 

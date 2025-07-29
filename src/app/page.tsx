@@ -8,6 +8,7 @@ import { getLogoUrl } from '@/lib/getLogoUrl';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
 import AuthModal from '@/components/AuthModal';
+import { Activity } from 'lucide-react';
 
 interface StockData {
   ticker: string;
@@ -25,12 +26,36 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [backgroundStatus, setBackgroundStatus] = useState<{
+    isRunning: boolean;
+    lastUpdate: string;
+    nextUpdate: string;
+  } | null>(null);
   
   // Authentication
   const { user, loading: authLoading, logout } = useAuth();
   
   // Use database-backed favorites with user ID
   const { favorites, toggleFavorite, isFavorite } = useFavorites(user?.id || 'default');
+
+  // Fetch background service status
+  useEffect(() => {
+    const fetchBackgroundStatus = async () => {
+      try {
+        const response = await fetch('/api/background/status');
+        const data = await response.json();
+        if (data.success && data.data.status) {
+          setBackgroundStatus(data.data.status);
+        }
+      } catch (error) {
+        console.error('Failed to fetch background status:', error);
+      }
+    };
+
+    fetchBackgroundStatus();
+    const interval = setInterval(fetchBackgroundStatus, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
 
   // Mock data for demonstration
@@ -203,7 +228,7 @@ export default function HomePage() {
           </div>
           
           {/* Auth Section */}
-          <div className="auth-section">
+          <div className="header-actions">
             {user ? (
               <div className="user-info">
                 <div className="user-details">
@@ -221,9 +246,7 @@ export default function HomePage() {
                 Sign In
               </button>
             )}
-          </div>
-          
-          <div className="header-actions">
+            
             <button onClick={() => fetchStockData(false)} disabled={loading}>
               {loading ? 'Refreshing...' : 'Refresh Data'}
             </button>
@@ -231,6 +254,14 @@ export default function HomePage() {
               <Table size={16} />
               Export CSV
             </button>
+            {backgroundStatus && (
+              <div className="background-status">
+                <Activity size={14} className={backgroundStatus.isRunning ? 'text-green-600' : 'text-red-600'} />
+                <span className="text-xs text-gray-600">
+                  {backgroundStatus.isRunning ? 'Auto-updating' : 'Manual mode'}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

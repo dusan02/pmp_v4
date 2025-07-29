@@ -98,10 +98,11 @@ body{font-family:var(--font-sans);background:var(--clr-bg);color:var(--clr-text)
 
 .header-actions {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 1rem;
   align-items: center;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .header-actions button {
@@ -114,6 +115,16 @@ body{font-family:var(--font-sans);background:var(--clr-bg);color:var(--clr-text)
   border-radius: var(--radius);
   font-size: 1rem; /* Consistent font size */
   font-weight: 600;
+}
+
+.background-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  border: 1px solid #e9ecef;
 }
 button{
   background:var(--clr-primary);
@@ -411,11 +422,7 @@ table th:nth-child(8), table td:nth-child(8) { width: 10%; text-align: center; }
   text-align: left;
 }
 
-.auth-section {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
+/* Auth section styles moved to header-actions */
 
 .user-info {
   display: flex;
