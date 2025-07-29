@@ -33,7 +33,7 @@ export default function HomePage() {
     { ticker: 'GOOGL', preMarketPrice: 195.13, percentChange: 1.32, marketCapDiff: 14.84, marketCap: 2336 },
     { ticker: 'META', preMarketPrice: 709.81, percentChange: -1.09, marketCapDiff: -16.98, marketCap: 1792 },
     { ticker: 'AVGO', preMarketPrice: 298.67, percentChange: 1.48, marketCapDiff: 20.55, marketCap: 1365 },
-    { ticker: 'BRK-B', preMarketPrice: 380.40, percentChange: 0.40, marketCapDiff: 1.6, marketCap: 300 }
+    { ticker: 'BRK.B', preMarketPrice: 380.40, percentChange: 0.40, marketCapDiff: 1.6, marketCap: 300 }
   ];
 
   useEffect(() => {
@@ -58,6 +58,8 @@ export default function HomePage() {
         throw new Error('Failed to fetch data');
       }
       const result = await response.json();
+      console.log('API response:', result);
+      console.log('Stock data length:', result.data?.length);
       setStockData(result.data);
       
       // Log cache status
@@ -88,7 +90,7 @@ export default function HomePage() {
   const getCompanyName = (ticker: string): string => {
     const companyNames: Record<string, string> = {
       'NVDA': 'NVIDIA', 'MSFT': 'Microsoft', 'AAPL': 'Apple', 'AMZN': 'Amazon', 'GOOGL': 'Alphabet', 'GOOG': 'Alphabet',
-      'META': 'Meta', 'AVGO': 'Broadcom', 'BRK.A': 'Berkshire Hathaway', 'TSLA': 'Tesla', 'JPM': 'JPMorgan Chase',
+      'META': 'Meta', 'AVGO': 'Broadcom', 'BRK.A': 'Berkshire Hathaway', 'BRK.B': 'Berkshire Hathaway', 'TSLA': 'Tesla', 'JPM': 'JPMorgan Chase',
       'WMT': 'Walmart', 'LLY': 'Eli Lilly', 'ORCL': 'Oracle', 'V': 'Visa', 'MA': 'Mastercard', 'NFLX': 'Netflix',
       'XOM': 'ExxonMobil', 'COST': 'Costco', 'JNJ': 'Johnson & Johnson', 'HD': 'Home Depot', 'PLTR': 'Palantir',
       'PG': 'Procter & Gamble', 'BAC': 'Bank of America', 'ABBV': 'AbbVie', 'CVX': 'Chevron', 'KO': 'Coca-Cola',
@@ -129,7 +131,24 @@ export default function HomePage() {
       'AEP': 'American Electric Power', 'NXPI': 'NXP Semiconductors', 'AXON': 'Axon Enterprise', 'URI': 'United Rentals',
       'COR': 'Cencora', 'FDX': 'FedEx', 'NDAQ': 'Nasdaq', 'AFL': 'Aflac', 'GLW': 'Corning', 'FAST': 'Fastenal',
       'MPC': 'Marathon Petroleum', 'SLB': 'Schlumberger', 'SRE': 'Sempra Energy', 'PAYX': 'Paychex',
-      'PCAR': 'PACCAR', 'MET': 'MetLife', 'BDX': 'Becton Dickinson', 'OKE': 'ONEOK', 'DDOG': 'Datadog'
+      'PCAR': 'PACCAR', 'MET': 'MetLife', 'BDX': 'Becton Dickinson', 'OKE': 'ONEOK', 'DDOG': 'Datadog',
+      // International companies
+      'TSM': 'Taiwan Semiconductor', 'SAP': 'SAP SE', 'ASML': 'ASML Holding', 'BABA': 'Alibaba Group', 'TM': 'Toyota Motor',
+      'AZN': 'AstraZeneca', 'HSBC': 'HSBC Holdings', 'NVS': 'Novartis', 'SHEL': 'Shell',
+      'HDB': 'HDFC Bank', 'RY': 'Royal Bank of Canada', 'NVO': 'Novo Nordisk', 'ARM': 'ARM Holdings',
+      'SHOP': 'Shopify', 'MUFG': 'Mitsubishi UFJ Financial', 'PDD': 'Pinduoduo', 'UL': 'Unilever',
+      'SONY': 'Sony Group', 'TTE': 'TotalEnergies', 'BHP': 'BHP Group', 'SAN': 'Banco Santander', 'TD': 'Toronto-Dominion Bank',
+      'SPOT': 'Spotify', 'UBS': 'UBS Group', 'IBN': 'ICICI Bank', 'SNY': 'Sanofi',
+      'BUD': 'Anheuser-Busch InBev', 'BTI': 'British American Tobacco', 'BN': 'Brookfield',
+      'SMFG': 'Sumitomo Mitsui Financial', 'ENB': 'Enbridge', 'RELX': 'RELX Group', 'TRI': 'Thomson Reuters', 'RACE': 'Ferrari',
+      'BBVA': 'Banco Bilbao Vizcaya', 'SE': 'Sea Limited', 'BP': 'BP', 'NTES': 'NetEase', 'BMO': 'Bank of Montreal',
+      'RIO': 'Rio Tinto', 'GSK': 'GlaxoSmithKline', 'MFG': 'Mizuho Financial', 'INFY': 'Infosys',
+      'CP': 'Canadian Pacific', 'BCS': 'Barclays', 'NGG': 'National Grid', 'BNS': 'Bank of Nova Scotia', 'ING': 'ING Group',
+      'EQNR': 'Equinor', 'CM': 'Canadian Imperial Bank', 'CNQ': 'Canadian Natural Resources', 'LYG': 'Lloyds Banking Group',
+      'AEM': 'Agnico Eagle Mines', 'DB': 'Deutsche Bank', 'NU': 'Nu Holdings', 'CNI': 'Canadian National Railway',
+      'DEO': 'Diageo', 'NWG': 'NatWest Group', 'AMX': 'America Movil', 'MFC': 'Manulife Financial',
+      'E': 'Eni', 'WCN': 'Waste Connections', 'SU': 'Suncor Energy', 'TRP': 'TC Energy', 'PBR': 'Petrobras',
+      'HMC': 'Honda Motor', 'GRMN': 'Garmin', 'CCEP': 'Coca-Cola Europacific', 'ALC': 'Alcon', 'TAK': 'Takeda Pharmaceutical'
     };
     return companyNames[ticker] || ticker;
   };
@@ -185,7 +204,7 @@ export default function HomePage() {
           <span className="brand-gradient">Market</span>
           <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
         </h1>
-        <p>Track real-time pre-market movements of the top 200 largest companies traded in the US. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
+        <p>Track real-time pre-market movements of the top 300 largest companies traded globally. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
         <div className="header-actions">
           <button onClick={() => fetchStockData(false)} disabled={loading}>
             {loading ? 'Refreshing...' : 'Refresh Data'}
@@ -245,11 +264,12 @@ export default function HomePage() {
                       alt={`${stock.ticker} logo`}
                       className="company-logo"
                       onError={(e) => { 
-                        (e.target as HTMLImageElement).style.display = 'none';
+                        const img = e.target as HTMLImageElement;
+                        img.style.display = 'none';
                         const placeholder = document.createElement('div');
                         placeholder.className = 'company-logo-placeholder';
                         placeholder.textContent = stock.ticker;
-                        (e.target as HTMLImageElement).parentNode?.appendChild(placeholder);
+                        img.parentNode?.appendChild(placeholder);
                       }}
                     />
                   </td>
@@ -334,11 +354,12 @@ export default function HomePage() {
                       alt={`${stock.ticker} logo`}
                       className="company-logo"
                       onError={(e) => { 
-                        (e.target as HTMLImageElement).style.display = 'none';
+                        const img = e.target as HTMLImageElement;
+                        img.style.display = 'none';
                         const placeholder = document.createElement('div');
                         placeholder.className = 'company-logo-placeholder';
                         placeholder.textContent = stock.ticker;
-                        (e.target as HTMLImageElement).parentNode?.appendChild(placeholder);
+                        img.parentNode?.appendChild(placeholder);
                       }}
                     />
                   </td>

@@ -8,7 +8,7 @@ const tickerDomains: Record<string, string> = {
   'GOOG': 'google.com',
   'META': 'meta.com',
   'AVGO': 'broadcom.com',
-  'BRK.A': 'berkshirehathaway.com',
+  'BRK.A': 'berkshirehathaway.com', 'BRK.B': 'berkshirehathaway.com',
   'TSLA': 'tesla.com',
   'JPM': 'jpmorganchase.com',
   'WMT': 'walmart.com',
@@ -23,7 +23,7 @@ const tickerDomains: Record<string, string> = {
   'HD': 'homedepot.com',
   'PLTR': 'palantir.com',
   'PG': 'pg.com',
-  'BAC': 'bankofamerica.com',
+  'BAC': 'bofa.com',
   'ABBV': 'abbvie.com',
   'CVX': 'chevron.com',
   'KO': 'coca-cola.com',
@@ -91,7 +91,7 @@ const tickerDomains: Record<string, string> = {
   'CMCSA': 'comcast.com',
   'COP': 'conocophillips.com',
   'KLAC': 'klatencor.com',
-  'VRTX': 'vertexpharma.com',
+  'VRTX': 'vrtx.com',
   'MDT': 'medtronic.com',
   'SNPS': 'synopsys.com',
   'NKE': 'nike.com',
@@ -122,7 +122,7 @@ const tickerDomains: Record<string, string> = {
   'MDLZ': 'mondelezinternational.com',
   'DELL': 'dell.com',
   'TDG': 'transdigm.com',
-  'CTAS': 'ctas.com',
+  'CTAS': 'cintas.com',
   'INTC': 'intel.com',
   'MCK': 'mckesson.com',
   'ABNB': 'airbnb.com',
@@ -174,7 +174,7 @@ const tickerDomains: Record<string, string> = {
   'CARR': 'carrier.com',
   'PWR': 'quanta.com',
   'REGN': 'regeneron.com',
-  'ROP': 'roper.com',
+  'ROP': 'ropertechnologies.com',
   'CMG': 'chipotle.com',
   'DLR': 'digitalrealty.com',
   'MNST': 'monsterbevcorp.com',
@@ -184,7 +184,7 @@ const tickerDomains: Record<string, string> = {
   'NXPI': 'nxp.com',
   'AXON': 'axon.com',
   'URI': 'unitedrentals.com',
-  'COR': 'corenergy.com',
+  'COR': 'cencora.com',
   'FDX': 'fedex.com',
   'NDAQ': 'nasdaq.com',
   'AFL': 'aflac.com',
@@ -198,10 +198,54 @@ const tickerDomains: Record<string, string> = {
   'MET': 'metlife.com',
   'BDX': 'bd.com',
   'OKE': 'oneok.com',
-  'DDOG': 'datadoghq.com'
+  'DDOG': 'datadoghq.com',
+  // International companies
+  'TSM': 'tsmc.com', 'SAP': 'sap.com', 'ASML': 'asml.com', 'BABA': 'alibaba.com', 'TM': 'toyota.com',
+  'AZN': 'astrazeneca.com', 'HSBC': 'hsbc.com', 'NVS': 'novartis.com', 'SHEL': 'shell.com',
+  'HDB': 'hdfcbank.com', 'RY': 'rbc.com', 'NVO': 'novonordisk.com', 'ARM': 'arm.com',
+  'SHOP': 'shopify.com', 'MUFG': 'mufg.jp', 'PDD': 'pinduoduo.com', 'UL': 'unilever.com',
+  'SONY': 'sony.com', 'TTE': 'totalenergies.com', 'BHP': 'bhp.com', 'SAN': 'santander.com', 'TD': 'td.com',
+  'SPOT': 'spotify.com', 'UBS': 'ubs.com', 'IBN': 'icicibank.com', 'SNY': 'sanofi.com',
+  'BUD': 'ab-inbev.com', 'BTI': 'bat.com', 'BN': 'brookfield.com',
+  'SMFG': 'smfg.co.jp', 'ENB': 'enbridge.com', 'RELX': 'relx.com', 'TRI': 'thomsonreuters.com', 'RACE': 'ferrari.com',
+  'BBVA': 'bbva.com', 'SE': 'sea.com', 'BP': 'bp.com', 'NTES': 'netease.com', 'BMO': 'bmo.com',
+  'RIO': 'riotinto.com', 'GSK': 'gsk.com', 'MFG': 'mizuho-fg.com', 'INFY': 'infosys.com',
+  'CP': 'cpr.ca', 'BCS': 'barclays.com', 'NGG': 'nationalgrid.com', 'BNS': 'scotiabank.com', 'ING': 'ing.com',
+  'EQNR': 'equinor.com', 'CM': 'cibc.com', 'CNQ': 'cnrl.com', 'LYG': 'lloydsbankinggroup.com',
+  'AEM': 'agnicoeagle.com', 'DB': 'deutsche-bank.com', 'NU': 'nu.com', 'CNI': 'cn.ca',
+  'DEO': 'diageo.com', 'NWG': 'natwestgroup.com', 'AMX': 'americamovil.com', 'MFC': 'manulife.com',
+  'E': 'eni.com', 'WCN': 'wasteconnections.com', 'SU': 'suncor.com', 'TRP': 'tcenergy.com', 'PBR': 'petrobras.com',
+  'HMC': 'honda.com', 'GRMN': 'garmin.com', 'CCEP': 'coca-colaep.com', 'ALC': 'alcon.com', 'TAK': 'takeda.com'
 };
 
 export function getLogoUrl(ticker: string): string {
   const domain = tickerDomains[ticker] ?? `${ticker.toLowerCase()}.com`;
+  
+  // Special handling for problematic tickers with alternative domains
+  if (ticker === 'BAC') {
+    return `https://logo.clearbit.com/bofa.com?size=32`;
+  }
+  if (ticker === 'DB') {
+    return `https://logo.clearbit.com/deutsche-bank.com?size=32`;
+  }
+  if (ticker === 'VRTX') {
+    return `https://logo.clearbit.com/vrtx.com?size=32`;
+  }
+  if (ticker === 'CTAS') {
+    return `https://logo.clearbit.com/cintas.com?size=32`;
+  }
+  if (ticker === 'ROP') {
+    return `https://logo.clearbit.com/ropertechnologies.com?size=32`;
+  }
+  if (ticker === 'COR') {
+    return `https://logo.clearbit.com/cencora.com?size=32`;
+  }
+  if (ticker === 'MFG') {
+    return `https://logo.clearbit.com/mizuho-fg.com?size=32`;
+  }
+  if (ticker === 'CCEP') {
+    return `https://logo.clearbit.com/coca-colaep.com?size=32`;
+  }
+  
   return `https://logo.clearbit.com/${domain}?size=32`;
 } 

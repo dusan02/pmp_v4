@@ -15,7 +15,7 @@ class StockDataCache {
 
   // Top 200 US companies by market cap
   private readonly TICKERS = [
-    'NVDA', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'GOOG', 'META', 'AVGO', 'BRK.A', 'TSLA',
+    'NVDA', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'GOOG', 'META', 'AVGO', 'BRK.A', 'BRK.B', 'TSLA',
     'JPM', 'WMT', 'LLY', 'ORCL', 'V', 'MA', 'NFLX', 'XOM', 'COST', 'JNJ', 'HD', 'PLTR',
     'PG', 'BAC', 'ABBV', 'CVX', 'KO', 'AMD', 'GE', 'CSCO', 'TMUS', 'WFC', 'CRM',
     'PM', 'IBM', 'UNH', 'MS', 'GS', 'INTU', 'LIN', 'ABT', 'AXP', 'BX', 'DIS', 'MCD',
@@ -32,7 +32,16 @@ class StockDataCache {
     'ELV', 'ADSK', 'APD', 'AZO', 'HLT', 'WDAY', 'SPG', 'NSC', 'KMI', 'TEL', 'FCX',
     'CARR', 'PWR', 'REGN', 'ROP', 'CMG', 'DLR', 'MNST', 'TFC', 'TRV', 'AEP', 'NXPI',
     'AXON', 'URI', 'COR', 'FDX', 'NDAQ', 'AFL', 'GLW', 'FAST', 'MPC', 'SLB', 'SRE',
-    'PAYX', 'PCAR', 'MET', 'BDX', 'OKE', 'DDOG'
+    'PAYX', 'PCAR', 'MET', 'BDX', 'OKE', 'DDOG',
+    // International companies
+    'TSM', 'SAP', 'ASML', 'BABA', 'TM', 'AZN', 'HSBC', 'NVS', 'LIN', 'SHEL',
+    'HDB', 'RY', 'NVO', 'ACN', 'ARM', 'SHOP', 'MUFG', 'PDD', 'ETN', 'UL',
+    'SONY', 'TTE', 'BHP', 'SAN', 'TD', 'SPOT', 'UBS', 'IBN', 'SNY', 'MDT',
+    'BUD', 'BTI', 'BN', 'CB', 'TT', 'SMFG', 'ENB', 'RELX', 'TRI', 'RACE',
+    'BBVA', 'SE', 'BP', 'NTES', 'BMO', 'RIO', 'AON', 'GSK', 'MFG', 'INFY',
+    'CP', 'BCS', 'NGG', 'BNS', 'ING', 'EQNR', 'JCI', 'CM', 'CNQ', 'LYG',
+    'AEM', 'DB', 'TEL', 'NU', 'CNI', 'DEO', 'NWG', 'NXPI', 'AMX', 'MFC',
+    'E', 'WCN', 'SU', 'TRP', 'PBR', 'HMC', 'GRMN', 'CCEP', 'ALC', 'TAK'
   ];
 
   // Share counts for market cap calculation - Updated for 98% accuracy with Finviz
@@ -40,7 +49,7 @@ class StockDataCache {
     // Top 10 by market cap - Finviz verified
     'NVDA': 24400000000, 'MSFT': 7440000000, 'AAPL': 15400000000, 'AMZN': 10400000000,
     'GOOGL': 12500000000, 'GOOG': 12500000000, 'META': 2520000000, 'AVGO': 4700000000,
-    'BRK.A': 1400000000, 'TSLA': 3180000000,
+    'BRK.A': 1400000000, 'BRK.B': 2200000000, 'TSLA': 3180000000,
     
     // Next 20 - Finviz verified
     'JPM': 2900000000, 'WMT': 8000000000, 'LLY': 950000000, 'ORCL': 2800000000,
@@ -92,7 +101,24 @@ class StockDataCache {
     'NDAQ': 500000000, 'AFL': 580000000, 'GLW': 800000000, 'FAST': 174000000,
     'MPC': 400000000, 'SLB': 1400000000, 'SRE': 250000000, 'PAYX': 350000000,
     'PCAR': 101000000, 'MET': 800000000, 'BDX': 1400000000, 'OKE': 440000000,
-    'DDOG': 300000000
+    'DDOG': 300000000,
+    // International companies share counts (excluding duplicates)
+    'TSM': 25900000000, 'SAP': 1200000000, 'ASML': 400000000, 'BABA': 2500000000, 'TM': 3000000000,
+    'AZN': 1500000000, 'HSBC': 20000000000, 'NVS': 2200000000, 'SHEL': 6500000000,
+    'HDB': 5500000000, 'RY': 1400000000, 'NVO': 2200000000, 'ARM': 1000000000,
+    'SHOP': 1300000000, 'MUFG': 12000000000, 'PDD': 1300000000, 'UL': 2600000000,
+    'SONY': 1200000000, 'TTE': 2500000000, 'BHP': 2500000000, 'SAN': 16000000000, 'TD': 1800000000,
+    'SPOT': 200000000, 'UBS': 3000000000, 'IBN': 12000000000, 'SNY': 4000000000,
+    'BUD': 2000000000, 'BTI': 900000000, 'BN': 3000000000, 'TT': 90000000,
+    'SMFG': 14000000000, 'ENB': 2000000000, 'RELX': 1000000000, 'TRI': 200000000, 'RACE': 1800000000,
+    'BBVA': 6000000000, 'SE': 500000000, 'BP': 3000000000, 'NTES': 650000000, 'BMO': 1200000000,
+    'RIO': 1600000000, 'GSK': 4000000000, 'MFG': 6000000000, 'INFY': 4000000000,
+    'CP': 700000000, 'BCS': 8000000000, 'NGG': 4000000000, 'BNS': 1200000000, 'ING': 3500000000,
+    'EQNR': 3000000000, 'CM': 1000000000, 'CNQ': 900000000, 'LYG': 1500000000,
+    'AEM': 500000000, 'DB': 2000000000, 'NU': 1000000000, 'CNI': 800000000,
+    'DEO': 2300000000, 'NWG': 1800000000, 'AMX': 6000000000, 'MFC': 1800000000,
+    'E': 1000000000, 'WCN': 400000000, 'SU': 400000000, 'TRP': 2000000000, 'PBR': 13000000000,
+    'HMC': 1800000000, 'GRMN': 200000000, 'CCEP': 450000000, 'ALC': 200000000, 'TAK': 3000000000
   };
 
   constructor() {
