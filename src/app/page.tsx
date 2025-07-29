@@ -59,19 +59,23 @@ export default function HomePage() {
     setStockData(mockStocks);
   }, []);
 
-  const fetchStockData = async () => {
+  const fetchStockData = async (refresh = false) => {
     setLoading(true);
     setError(null);
 
     try {
-      // Get list of tickers from mock data for now
-      const tickers = mockStocks.map(stock => stock.ticker).join(',');
-      const response = await fetch(`/api/prices?tickers=${tickers}`);
+      // Use cached API endpoint
+      const response = await fetch(`/api/prices/cached?refresh=${refresh}`);
       if (!response.ok) {
         throw new Error('Failed to fetch data');
       }
-      const data = await response.json();
-      setStockData(data);
+      const result = await response.json();
+      setStockData(result.data);
+      
+      // Log cache status
+      if (result.cacheStatus) {
+        console.log('Cache status:', result.cacheStatus);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       // Fallback to mock data
@@ -110,7 +114,7 @@ export default function HomePage() {
           <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
         </h1>
         <p>Pre-market percentage changes and market cap differences for S&P 500 companies</p>
-        <button onClick={fetchStockData} disabled={loading}>
+        <button onClick={() => fetchStockData(false)} disabled={loading}>
           {loading ? 'Refreshing...' : 'Refresh Data'}
         </button>
       </div>
