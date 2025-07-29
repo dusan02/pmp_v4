@@ -1,3 +1,5 @@
+import { getCachedData, setCachedData, getCacheStatus, setCacheStatus, CACHE_KEYS } from './redis';
+
 interface CachedStockData {
   ticker: string;
   preMarketPrice: number;
@@ -34,13 +36,13 @@ class StockDataCache {
     'AXON', 'URI', 'COR', 'FDX', 'NDAQ', 'AFL', 'GLW', 'FAST', 'MPC', 'SLB', 'SRE',
     'PAYX', 'PCAR', 'MET', 'BDX', 'OKE', 'DDOG',
     // International companies
-    'TSM', 'SAP', 'ASML', 'BABA', 'TM', 'AZN', 'HSBC', 'NVS', 'LIN', 'SHEL',
-    'HDB', 'RY', 'NVO', 'ACN', 'ARM', 'SHOP', 'MUFG', 'PDD', 'ETN', 'UL',
-    'SONY', 'TTE', 'BHP', 'SAN', 'TD', 'SPOT', 'UBS', 'IBN', 'SNY', 'MDT',
-    'BUD', 'BTI', 'BN', 'CB', 'TT', 'SMFG', 'ENB', 'RELX', 'TRI', 'RACE',
-    'BBVA', 'SE', 'BP', 'NTES', 'BMO', 'RIO', 'AON', 'GSK', 'MFG', 'INFY',
-    'CP', 'BCS', 'NGG', 'BNS', 'ING', 'EQNR', 'JCI', 'CM', 'CNQ', 'LYG',
-    'AEM', 'DB', 'TEL', 'NU', 'CNI', 'DEO', 'NWG', 'NXPI', 'AMX', 'MFC',
+    'TSM', 'SAP', 'ASML', 'BABA', 'TM', 'AZN', 'HSBC', 'NVS', 'SHEL',
+    'HDB', 'RY', 'NVO', 'ARM', 'SHOP', 'MUFG', 'PDD', 'UL',
+    'SONY', 'TTE', 'BHP', 'SAN', 'TD', 'SPOT', 'UBS', 'IBN', 'SNY',
+    'BUD', 'BTI', 'BN', 'SMFG', 'ENB', 'RELX', 'TRI', 'RACE',
+    'BBVA', 'SE', 'BP', 'NTES', 'BMO', 'RIO', 'GSK', 'MFG', 'INFY',
+    'CP', 'BCS', 'NGG', 'BNS', 'ING', 'EQNR', 'CM', 'CNQ', 'LYG',
+    'AEM', 'DB', 'NU', 'CNI', 'DEO', 'NWG', 'AMX', 'MFC',
     'E', 'WCN', 'SU', 'TRP', 'PBR', 'HMC', 'GRMN', 'CCEP', 'ALC', 'TAK'
   ];
 
@@ -109,7 +111,7 @@ class StockDataCache {
     'SHOP': 1300000000, 'MUFG': 12000000000, 'PDD': 1300000000, 'UL': 2600000000,
     'SONY': 1200000000, 'TTE': 2500000000, 'BHP': 2500000000, 'SAN': 16000000000, 'TD': 1800000000,
     'SPOT': 200000000, 'UBS': 3000000000, 'IBN': 12000000000, 'SNY': 4000000000,
-    'BUD': 2000000000, 'BTI': 900000000, 'BN': 3000000000, 'TT': 90000000,
+    'BUD': 2000000000, 'BTI': 900000000, 'BN': 3000000000,
     'SMFG': 14000000000, 'ENB': 2000000000, 'RELX': 1000000000, 'TRI': 200000000, 'RACE': 1800000000,
     'BBVA': 6000000000, 'SE': 500000000, 'BP': 3000000000, 'NTES': 650000000, 'BMO': 1200000000,
     'RIO': 1600000000, 'GSK': 4000000000, 'MFG': 6000000000, 'INFY': 4000000000,
@@ -208,11 +210,24 @@ class StockDataCache {
         }
       }
 
-      // Update cache
+      // Update in-memory cache
       this.cache.clear();
       results.forEach(stock => {
         this.cache.set(stock.ticker, stock);
       });
+
+      // Update Redis cache
+      try {
+        await setCachedData(CACHE_KEYS.STOCK_DATA, results);
+        await setCacheStatus({
+          count: results.length,
+          lastUpdated: new Date(),
+          isUpdating: false
+        });
+        console.log(`✅ Redis cache updated with ${results.length} stocks at ${new Date().toISOString()}`);
+      } catch (error) {
+        console.error('Failed to update Redis cache:', error);
+      }
 
       console.log(`Cache updated with ${results.length} stocks at ${new Date().toISOString()}`);
 
@@ -240,23 +255,51 @@ class StockDataCache {
     }
   }
 
-  getAllStocks(): CachedStockData[] {
-    return Array.from(this.cache.values()).sort((a, b) => b.marketCap - a.marketCap);
+  async getAllStocks(): Promise<CachedStockData[]> {
+    try {
+      // Try to get from Redis first
+      const cachedData = await getCachedData(CACHE_KEYS.STOCK_DATA);
+      if (cachedData) {
+        return cachedData.sort((a: CachedStockData, b: CachedStockData) => b.marketCap - a.marketCap);
+      }
+      
+      // Fallback to in-memory cache
+      return Array.from(this.cache.values()).sort((a, b) => b.marketCap - a.marketCap);
+    } catch (error) {
+      console.error('Error getting cached data:', error);
+      return Array.from(this.cache.values()).sort((a, b) => b.marketCap - a.marketCap);
+    }
   }
 
   getStock(ticker: string): CachedStockData | null {
     return this.cache.get(ticker) || null;
   }
 
-  getCacheStatus(): { count: number; lastUpdated: Date | null; isUpdating: boolean } {
-    const stocks = this.getAllStocks();
-    const lastUpdated = stocks.length > 0 ? stocks[0].lastUpdated : null;
-    
-    return {
-      count: stocks.length,
-      lastUpdated,
-      isUpdating: this.isUpdating
-    };
+  async getCacheStatus(): Promise<{ count: number; lastUpdated: Date | null; isUpdating: boolean }> {
+    try {
+      // Try to get from Redis first
+      const cachedStatus = await getCacheStatus();
+      if (cachedStatus) {
+        return cachedStatus;
+      }
+      
+      // Fallback to in-memory cache
+      const stocks = await this.getAllStocks();
+      const lastUpdated = stocks.length > 0 ? stocks[0].lastUpdated : null;
+      
+      return {
+        count: stocks.length,
+        lastUpdated,
+        isUpdating: this.isUpdating
+      };
+    } catch (error) {
+      console.error('Error getting cache status:', error);
+      return {
+        count: 0,
+        lastUpdated: null,
+        isUpdating: this.isUpdating
+      };
+    }
   }
 }
 

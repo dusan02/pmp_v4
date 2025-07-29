@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get cache status
-    const cacheStatus = stockDataCache.getCacheStatus();
+    const cacheStatus = await stockDataCache.getCacheStatus();
 
     if (tickers) {
       // Return specific tickers
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
       });
     } else {
       // Return all stocks
-      const allStocks = stockDataCache.getAllStocks();
+      const allStocks = await stockDataCache.getAllStocks();
       
       return NextResponse.json({
         data: allStocks,
