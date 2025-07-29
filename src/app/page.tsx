@@ -29,7 +29,7 @@ export default function HomePage() {
     { ticker: 'NVDA', preMarketPrice: 450.25, percentChange: 1.00, marketCapDiff: 4.5, marketCap: 1200 },
     { ticker: 'META', preMarketPrice: 380.50, percentChange: 1.41, marketCapDiff: 2.8, marketCap: 1100 },
     { ticker: 'TSLA', preMarketPrice: 245.75, percentChange: 1.51, marketCapDiff: 3.6, marketCap: 800 },
-    { ticker: 'BRK', preMarketPrice: 365.20, percentChange: 0.66, marketCapDiff: 1.2, marketCap: 900 },
+    { ticker: 'BRK-B', preMarketPrice: 365.20, percentChange: 0.66, marketCapDiff: 1.2, marketCap: 900 },
     { ticker: 'LLY', preMarketPrice: 890.50, percentChange: 0.60, marketCapDiff: 1.8, marketCap: 700 },
     { ticker: 'TSM', preMarketPrice: 125.80, percentChange: 1.04, marketCapDiff: 2.3, marketCap: 600 },
     { ticker: 'V', preMarketPrice: 280.40, percentChange: 0.54, marketCapDiff: 1.5, marketCap: 550 },
@@ -64,7 +64,9 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/prices');
+      // Get list of tickers from mock data for now
+      const tickers = mockStocks.map(stock => stock.ticker).join(',');
+      const response = await fetch(`/api/prices?tickers=${tickers}`);
       if (!response.ok) {
         throw new Error('Failed to fetch data');
       }
