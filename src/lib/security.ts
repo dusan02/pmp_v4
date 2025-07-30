@@ -131,7 +131,7 @@ export function logSecurityEvent(event: {
 
   // Store event in memory for API access
   try {
-    const { addSecurityEvent } = require('@/app/api/security/events/route');
+    const { addSecurityEvent } = require('@/lib/security-events');
     addSecurityEvent(event);
   } catch (error) {
     console.error('Failed to store security event:', error);

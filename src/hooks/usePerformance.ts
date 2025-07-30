@@ -2,6 +2,13 @@
 
 import { useEffect, useCallback } from 'react';
 
+// Extend Window interface for gtag
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
+
 interface PerformanceMetrics {
   fcp: number | null;
   lcp: number | null;
@@ -48,7 +55,7 @@ export function usePerformance() {
     // First Input Delay
     const fidObserver = new PerformanceObserver((list) => {
       const entries = list.getEntries();
-      const fid = entries[0] as PerformanceEntry;
+      const fid = entries[0] as PerformanceEventTiming;
       reportMetric('FID', fid.processingStart - fid.startTime);
     });
 

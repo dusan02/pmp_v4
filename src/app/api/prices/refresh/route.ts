@@ -3,7 +3,7 @@ import { stockDataCache } from '@/lib/cache';
 
 export async function POST(request: NextRequest) {
   try {
-    const cacheStatus = stockDataCache.getCacheStatus();
+    const cacheStatus = await stockDataCache.getCacheStatus();
     
     // Check if update is already in progress
     if (cacheStatus.isUpdating) {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const cacheStatus = stockDataCache.getCacheStatus();
+    const cacheStatus = await stockDataCache.getCacheStatus();
     
     return NextResponse.json({
       cacheStatus,
