@@ -7,13 +7,12 @@ export async function GET(request: NextRequest) {
     const tickers = searchParams.get('tickers');
     const refresh = searchParams.get('refresh') === 'true';
 
-    // If refresh is requested, trigger cache update
-    if (refresh) {
+    // Always trigger cache update if no data exists
+    const cacheStatus = await stockDataCache.getCacheStatus();
+    if (cacheStatus.count === 0 || refresh) {
+      console.log('Cache is empty or refresh requested, updating...');
       await stockDataCache.updateCache();
     }
-
-    // Get cache status
-    const cacheStatus = await stockDataCache.getCacheStatus();
 
     if (tickers) {
       // Return specific tickers

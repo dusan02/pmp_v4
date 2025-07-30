@@ -17,7 +17,7 @@ export default function CompanyLogo({
   priority = false
 }: CompanyLogoProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [src, setSrc] = useState('');
+  const [src, setSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Get all possible logo sources
@@ -54,7 +54,7 @@ export default function CompanyLogo({
   }, [ticker, size]);
 
   useEffect(() => {
-    if (!src) return;
+    if (!src || src === '') return;
 
     const logoSources = getLogoSources(ticker);
     const img = new Image();
@@ -87,6 +87,22 @@ export default function CompanyLogo({
       img.onerror = null;
     };
   }, [src, currentIndex, ticker, size]);
+
+  // Don't render img if src is null or empty
+  if (!src || src === '') {
+    return (
+      <div 
+        className={`rounded-full bg-gray-200 flex items-center justify-center ${className}`}
+        style={{ 
+          width: size, 
+          height: size,
+          opacity: 0.5
+        }}
+      >
+        <span className="text-xs font-bold text-gray-500">{ticker}</span>
+      </div>
+    );
+  }
 
   return (
     <img
