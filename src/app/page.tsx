@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown, Download, Table, User, LogOut } from 'lucide-react';
 import { useSortableData } from '@/hooks/useSortableData';
 import { formatBillions } from '@/lib/format';
-import { getLogoUrl } from '@/lib/getLogoUrl';
+import { stockDataCache } from '@/lib/cache';
+
+import CompanyLogo from '@/components/CompanyLogo';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
 import AuthModal from '@/components/AuthModal';
@@ -225,6 +227,9 @@ export default function HomePage() {
               <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
             </h1>
             <p>Track real-time pre-market movements of the top 300 largest companies traded globally. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
+            <div className="trading-hours-info">
+              <p><strong>Live prices available from 4:00 AM to 8:00 PM EST daily</strong> • Pre-market (4:00-9:30 AM) • Market hours (9:30 AM-4:00 PM) • After-hours (4:00-8:00 PM)</p>
+            </div>
           </div>
           
           {/* Auth Section */}
@@ -308,19 +313,7 @@ export default function HomePage() {
               {favoriteStocksSorted.map((stock) => (
                 <tr key={stock.ticker}>
                   <td>
-                    <img
-                      src={getLogoUrl(stock.ticker)}
-                      alt={`${stock.ticker} logo`}
-                      className="company-logo"
-                      onError={(e) => { 
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = 'none';
-                        const placeholder = document.createElement('div');
-                        placeholder.className = 'company-logo-placeholder';
-                        placeholder.textContent = stock.ticker;
-                        img.parentNode?.appendChild(placeholder);
-                      }}
-                    />
+                    <CompanyLogo ticker={stock.ticker} size={32} />
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
                   <td className="company-name">{getCompanyName(stock.ticker)}</td>
@@ -398,19 +391,7 @@ export default function HomePage() {
               return (
                 <tr key={stock.ticker}>
                   <td>
-                    <img
-                      src={getLogoUrl(stock.ticker)}
-                      alt={`${stock.ticker} logo`}
-                      className="company-logo"
-                      onError={(e) => { 
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = 'none';
-                        const placeholder = document.createElement('div');
-                        placeholder.className = 'company-logo-placeholder';
-                        placeholder.textContent = stock.ticker;
-                        img.parentNode?.appendChild(placeholder);
-                      }}
-                    />
+                    <CompanyLogo ticker={stock.ticker} size={32} />
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
                   <td className="company-name">{getCompanyName(stock.ticker)}</td>
