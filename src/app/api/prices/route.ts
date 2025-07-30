@@ -47,8 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     const tickerList = tickers.split(',').map(t => t.trim().toUpperCase());
-    // Use the provided API key directly
-    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+    const apiKey = process.env.POLYGON_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(

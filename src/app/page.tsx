@@ -4,14 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown, Download, Table, User, LogOut } from 'lucide-react';
 import { useSortableData } from '@/hooks/useSortableData';
 import { formatBillions } from '@/lib/format';
-import { getLogoUrl } from '@/lib/getLogoUrl';
+// Remove cache import - it's server-side only
+
+import CompanyLogo from '@/components/CompanyLogo';
+import MarketIndicators from '@/components/MarketIndicators';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/hooks/useAuth';
 import AuthModal from '@/components/AuthModal';
 import { Activity } from 'lucide-react';
-import CompanyLogo from '@/components/CompanyLogo';
-import { usePerformance } from '@/hooks/usePerformance';
-import { preloadCriticalLogos } from '@/lib/preload';
 
 interface StockData {
   ticker: string;
@@ -40,9 +40,6 @@ export default function HomePage() {
   
   // Use database-backed favorites with user ID
   const { favorites, toggleFavorite, isFavorite } = useFavorites(user?.id || 'default');
-  
-  // Performance monitoring
-  usePerformance();
 
   // Fetch background service status
   useEffect(() => {
@@ -81,14 +78,6 @@ export default function HomePage() {
     fetchStockData(false);
   }, []);
 
-  // Preload critical logos when stock data is available
-  useEffect(() => {
-    if (stockData.length > 0) {
-      const tickers = stockData.map(stock => stock.ticker);
-      preloadCriticalLogos(tickers);
-    }
-  }, [stockData]);
-
   const fetchStockData = async (refresh = false) => {
     setLoading(true);
     setError(null);
@@ -102,14 +91,24 @@ export default function HomePage() {
       const result = await response.json();
       console.log('API response:', result);
       console.log('Stock data length:', result.data?.length);
-      setStockData(result.data);
+      
+      // Check if we have valid data
+      if (result.data && result.data.length > 0) {
+        setStockData(result.data);
+      } else {
+        // No data from API, use mock data
+        console.log('No data from API, using mock data');
+        setStockData(mockStocks);
+        setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key in .env.local file.');
+      }
       
       // Log cache status
       if (result.cacheStatus) {
         console.log('Cache status:', result.cacheStatus);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.log('API error, using mock data:', err);
+      setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key in .env.local file.');
       // Fallback to mock data
       setStockData(mockStocks);
     } finally {
@@ -230,44 +229,53 @@ export default function HomePage() {
   };
 
   return (
-          <div className="container">
-        <div className="header">
-          <div className="header-content">
+    <div className="container">
+      <div className="header">
+        {/* Top Row: Brand + Market Indicators */}
+        <div className="header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '2rem' }}>
+          <div className="brand-section" style={{ flex: 1, maxWidth: '60%' }}>
             <h1 className="brand-heading">
               <span className="brand-dark">Pre</span>
               <span className="brand-gradient">Market</span>
               <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
             </h1>
-            <p>Track real-time pre-market movements of the top 300 largest companies traded globally. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
+            <div className="trading-hours-info">
+              <p><strong>Live prices available from 4:00 AM to 8:00 PM EST daily</strong> • Pre-market (4:00-9:30 AM) • Market hours (9:30 AM-4:00 PM) • After-hours (4:00-8:00 PM)</p>
+            </div>
+            <div className="description-section">
+              <p>Track real-time pre-market movements of the top 300 largest companies traded globally. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
+            </div>
           </div>
-          
-          {/* Auth Section */}
-          <div className="header-actions">
-            {user ? (
-              <div className="user-info">
-                <div className="user-details">
-                  <p className="user-name">{user.name || user.email}</p>
-                  <p className="user-status">Signed in</p>
+          <div className="actions-section">
+            {/* Auth Section */}
+            <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              {user ? (
+                <div className="user-info">
+                  <div className="user-details">
+                    <p className="user-name">{user.name || user.email}</p>
+                    <p className="user-status">Signed in</p>
+                  </div>
+                  <button onClick={logout} className="header-btn">
+                    <LogOut size={16} />
+                    Logout
+                  </button>
                 </div>
-                <button onClick={logout} className="logout-btn">
-                  <LogOut size={16} />
-                  Logout
+              ) : (
+                <button onClick={() => setShowAuthModal(true)} className="header-btn">
+                  <User size={16} />
+                  Sign In
                 </button>
-              </div>
-            ) : (
-              <button onClick={() => setShowAuthModal(true)} className="signin-btn">
-                <User size={20} />
-                Sign In
+              )}
+              {/* Action Buttons */}
+              <button onClick={() => fetchStockData(false)} disabled={loading} className="header-btn">
+                {loading ? 'Refreshing...' : 'Refresh Data'}
               </button>
-            )}
-            
-            <button onClick={() => fetchStockData(false)} disabled={loading}>
-              {loading ? 'Refreshing...' : 'Refresh Data'}
-            </button>
-            <button onClick={exportToCSV} className="export-btn">
-              <Table size={16} />
-              Export CSV
-            </button>
+              <button onClick={exportToCSV} className="header-btn export-btn">
+                <Table size={16} />
+                Export CSV
+              </button>
+            </div>
+            {/* Background Status */}
             {backgroundStatus && (
               <div className="background-status">
                 <Activity size={14} className={backgroundStatus.isRunning ? 'text-green-600' : 'text-red-600'} />
@@ -278,6 +286,7 @@ export default function HomePage() {
             )}
           </div>
         </div>
+      </div>
 
       {error && (
         <div className="error">
@@ -322,11 +331,7 @@ export default function HomePage() {
               {favoriteStocksSorted.map((stock) => (
                 <tr key={stock.ticker}>
                   <td>
-                    <CompanyLogo 
-                      ticker={stock.ticker} 
-                      size={32} 
-                      priority={true}
-                    />
+                    <CompanyLogo ticker={stock.ticker} size={32} />
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
                   <td className="company-name">{getCompanyName(stock.ticker)}</td>
@@ -404,11 +409,7 @@ export default function HomePage() {
               return (
                 <tr key={stock.ticker}>
                   <td>
-                    <CompanyLogo 
-                      ticker={stock.ticker} 
-                      size={32} 
-                      priority={false}
-                    />
+                    <CompanyLogo ticker={stock.ticker} size={32} />
                   </td>
                   <td><strong>{stock.ticker}</strong></td>
                   <td className="company-name">{getCompanyName(stock.ticker)}</td>

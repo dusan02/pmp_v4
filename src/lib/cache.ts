@@ -196,24 +196,182 @@ class StockDataCache {
     console.log('Starting cache update...');
 
     try {
-      // Generate mock data for all tickers
-      const results: CachedStockData[] = this.TICKERS.map(ticker => {
-        const basePrice = Math.random() * 500 + 50; // Random price between 50-550
-        const percentChange = (Math.random() - 0.5) * 10; // Random change between -5% and +5%
-        const preMarketPrice = basePrice * (1 + percentChange / 100);
-        const marketCap = this.shareCounts[ticker] * basePrice / 1000000000; // Market cap in billions
-        const marketCapDiff = marketCap * percentChange / 100;
+             const apiKey = process.env.POLYGON_API_KEY;
+       console.log('API Key found:', apiKey ? 'Yes' : 'No');
+       console.log('API Key length:', apiKey?.length);
+       console.log('API Key (first 10 chars):', apiKey?.substring(0, 10) + '...');
+       
+       if (!apiKey) {
+         console.error('POLYGON_API_KEY not found in environment variables');
+         return;
+       }
+             const batchSize = 20; // Process in batches to avoid rate limits
+       const results: CachedStockData[] = [];
 
-        return {
-          ticker,
-          preMarketPrice: Math.round(preMarketPrice * 100) / 100,
-          closePrice: Math.round(basePrice * 100) / 100,
-          percentChange: Math.round(percentChange * 100) / 100,
-          marketCapDiff: Math.round(marketCapDiff * 100) / 100,
-          marketCap: Math.round(marketCap * 100) / 100,
-          lastUpdated: new Date()
-        };
-      });
+               // Test first API call to see exact error
+        console.log('🔍 Testing API call for first ticker...');
+        const testUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/NVDA?apikey=${apiKey}`;
+        const testResponse = await fetch(testUrl);
+        console.log('Test response status:', testResponse.status);
+        if (!testResponse.ok) {
+          const testErrorBody = await testResponse.text();
+          console.error('❌ Test API call failed:', {
+            status: testResponse.status,
+            body: testErrorBody,
+            url: testUrl,
+          });
+        } else {
+          console.log('✅ Test API call successful');
+          const testData = await testResponse.json();
+          console.log('Test data structure:', JSON.stringify(testData, null, 2));
+        }
+
+       // Process tickers in batches with rate limiting
+       for (let i = 0; i < this.TICKERS.length; i += batchSize) {
+        const batch = this.TICKERS.slice(i, i + batchSize);
+        
+        // Add delay between batches to respect rate limits
+        if (i > 0) {
+          console.log(`⏳ Rate limiting: waiting 1 second between batches...`);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        const batchPromises = batch.map(async (ticker) => {
+          try {
+                         // Get ticker details for market cap
+             const detailsUrl = `https://api.polygon.io/v3/reference/tickers/${ticker}?apikey=${apiKey}`;
+             const detailsResponse = await fetch(detailsUrl);
+             
+             let marketCap = 0;
+             let shares = 0;
+             
+             if (!detailsResponse.ok) {
+               const errorBody = await detailsResponse.text();
+               console.error(`❌ Polygon API failed for ${ticker} details:`, {
+                 status: detailsResponse.status,
+                 body: errorBody,
+                 url: detailsUrl,
+               });
+             } else {
+               const detailsData = await detailsResponse.json();
+               if (detailsData?.results) {
+                 marketCap = detailsData.results.market_cap || 0;
+                 shares = detailsData.results.share_class_shares_outstanding || 0;
+               }
+             }
+             
+             // Get previous close data
+             const prevUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`;
+             const prevResponse = await fetch(prevUrl);
+
+             if (!prevResponse.ok) {
+               const errorBody = await prevResponse.text();
+               console.error(`❌ Polygon API failed for ${ticker} (prev):`, {
+                 status: prevResponse.status,
+                 body: errorBody,
+                 url: prevUrl,
+               });
+               return null;
+             }
+
+             const prevData = await prevResponse.json();
+             console.log(`📊 Prev data for ${ticker}:`, JSON.stringify(prevData, null, 2));
+
+             if (!prevData?.results?.[0]?.c) {
+               console.warn(`❌ No valid prev data for ${ticker} - missing required fields`);
+               console.warn(`   prevData?.results?.[0]?.c: ${prevData?.results?.[0]?.c}`);
+               console.warn(`   Full response:`, JSON.stringify(prevData, null, 2));
+               return null;
+             }
+
+             const prevClose = prevData.results[0].c;
+
+             // Get current price (including pre-market)
+             const lastUrl = `https://api.polygon.io/v1/last/stocks/${ticker}?apiKey=${apiKey}`;
+             const lastResponse = await fetch(lastUrl);
+
+             if (!lastResponse.ok) {
+               const errorBody = await lastResponse.text();
+               console.error(`❌ Polygon API failed for ${ticker} (last):`, {
+                 status: lastResponse.status,
+                 body: errorBody,
+                 url: lastUrl,
+               });
+               return null;
+             }
+
+             const lastData = await lastResponse.json();
+             console.log(`📊 Last data for ${ticker}:`, JSON.stringify(lastData, null, 2));
+
+             if (!lastData?.last?.price) {
+               console.warn(`❌ No valid last data for ${ticker} - missing required fields`);
+               console.warn(`   lastData?.last?.price: ${lastData?.last?.price}`);
+               console.warn(`   Full response:`, JSON.stringify(lastData, null, 2));
+               return null;
+             }
+
+             const currentPrice = lastData.last.price;
+            const percentChange = ((currentPrice - prevClose) / prevClose) * 100;
+            
+            // Use Polygon's market cap if available, otherwise calculate
+            const finalMarketCap = marketCap > 0 ? marketCap / 1_000_000_000 : (currentPrice * shares) / 1_000_000_000;
+            const marketCapDiff = (currentPrice - prevClose) * (shares || this.shareCounts[ticker] || 1000000000) / 1_000_000_000;
+
+            const stockData = {
+              ticker,
+              preMarketPrice: Math.round(currentPrice * 100) / 100,
+              closePrice: Math.round(prevClose * 100) / 100,
+              percentChange: Math.round(percentChange * 100) / 100,
+              marketCapDiff: Math.round(marketCapDiff * 100) / 100,
+              marketCap: Math.round(finalMarketCap * 100) / 100,
+              lastUpdated: new Date()
+            };
+
+            console.log(`✅ Successfully fetched data for ${ticker}: $${currentPrice} (${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%)`);
+
+            // Save to database
+            try {
+              const companyName = this.companyNames[ticker] || ticker;
+              const shareCount = shares || this.shareCounts[ticker] || 1000000000;
+              
+              runTransaction(() => {
+                // Update stock info
+                dbHelpers.upsertStock.run(
+                  ticker,
+                  companyName,
+                  finalMarketCap * 1_000_000_000, // Convert back to actual market cap
+                  shareCount,
+                  new Date().toISOString()
+                );
+
+                                 // Add price history
+                 dbHelpers.addPriceHistory.run(
+                   ticker,
+                   currentPrice,
+                   lastData.last?.size || 0, // Volume
+                  new Date().toISOString()
+                );
+              });
+            } catch (dbError) {
+              console.error(`Database error for ${ticker}:`, dbError);
+            }
+
+            return stockData;
+
+          } catch (error) {
+            console.error(`Error processing ${ticker}:`, error);
+            return null;
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults.filter(Boolean) as CachedStockData[]);
+
+        // Add delay between batches to respect rate limits
+        if (i + batchSize < this.TICKERS.length) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
 
       // Update in-memory cache
       this.cache.clear();
@@ -313,10 +471,4 @@ class StockDataCache {
 }
 
 // Singleton instance
-export const stockDataCache = new StockDataCache();
-
-// Initialize cache on module load
-stockDataCache.startBackgroundUpdates();
-
-// Initialize cache on module load
-stockDataCache.startBackgroundUpdates(); 
+export const stockDataCache = new StockDataCache(); 
