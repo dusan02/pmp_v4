@@ -1,6 +1,11 @@
 import { stockDataCache } from './cache';
 import redisClient from './redis';
 import { dbHelpers } from './database';
+import { 
+  updateBackgroundServiceStatus, 
+  recordBackgroundUpdate, 
+  recordBackgroundError 
+} from './prometheus';
 
 interface BackgroundServiceConfig {
   updateInterval: number; // milliseconds
@@ -34,6 +39,7 @@ class BackgroundDataService {
 
     console.log('🚀 Starting background data service...');
     this.isRunning = true;
+    updateBackgroundServiceStatus(true);
 
     // Initial update
     await this.performUpdate();
@@ -55,6 +61,7 @@ class BackgroundDataService {
 
     console.log('🛑 Stopping background service...');
     this.isRunning = false;
+    updateBackgroundServiceStatus(false);
 
     if (this.updateTimer) {
       clearTimeout(this.updateTimer);
@@ -101,10 +108,12 @@ class BackgroundDataService {
 
       const duration = Date.now() - startTime;
       console.log(`✅ Background update completed in ${duration}ms`);
+      recordBackgroundUpdate(duration / 1000); // Convert to seconds
 
     } catch (error) {
       this.errorCount++;
       console.error('❌ Background update failed:', error);
+      recordBackgroundError();
 
       // Store error status
       await this.storeUpdateStatus({

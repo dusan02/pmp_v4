@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronUp, ChevronDown, Download, Table, User, LogOut } from 'lucide-react';
+import { ChevronUp, ChevronDown, Download, Table, User, LogOut, AlertTriangle } from 'lucide-react';
 import { useSortableData } from '@/hooks/useSortableData';
 import { formatBillions } from '@/lib/format';
 // Remove cache import - it's server-side only
@@ -232,8 +232,8 @@ export default function HomePage() {
     <div className="container">
       <div className="header">
         {/* Top Row: Brand + Market Indicators */}
-        <div className="header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '2rem' }}>
-          <div className="brand-section" style={{ flex: 1, maxWidth: '60%' }}>
+        <div className="header-top">
+          <div className="brand-section">
             <h1 className="brand-heading">
               <span className="brand-dark">Pre</span>
               <span className="brand-gradient">Market</span>
@@ -248,7 +248,7 @@ export default function HomePage() {
           </div>
           <div className="actions-section">
             {/* Auth Section */}
-            <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div className="header-actions">
               {user ? (
                 <div className="user-info">
                   <div className="user-details">
@@ -274,6 +274,10 @@ export default function HomePage() {
                 <Table size={16} />
                 Export CSV
               </button>
+              <a href="/errors" className="header-btn errors-link">
+                <AlertTriangle size={16} />
+                Errors
+              </a>
             </div>
             {/* Background Status */}
             {backgroundStatus && (

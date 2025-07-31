@@ -380,6 +380,14 @@ body{font-family:var(--font-sans);background:var(--clr-bg);color:var(--clr-text)
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* Errors link variant */
+.header-btn.errors-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* User Info Styles */
 .user-info {
   display: flex;
