@@ -300,7 +300,7 @@ class StockDataCache {
                const detailsData = await detailsResponse.json();
                if (detailsData?.results) {
                  const rawMarketCap = detailsData.results.market_cap || 0;
-                 shares = detailsData.results.share_class_shares_outstanding || 0;
+                 shares = detailsData.results.weighted_shares_outstanding || 0;
                  
                  // Check if market cap data is fresh (< 60 seconds old)
                  const updatedTimestamp = detailsData.results.updated;
@@ -308,43 +308,71 @@ class StockDataCache {
                    const ageMs = Date.now() - updatedTimestamp;
                    if (ageMs > 60000) { // Older than 60 seconds
                      console.warn(`⚠️ Stale market cap for ${ticker} (${Math.round(ageMs/1000)}s old), using calculated instead`);
-                     marketCap = 0; // Force calculation
+                     marketCap = 0; // Will be calculated manually below
                    } else {
-                     marketCap = rawMarketCap;
+                     marketCap = 0; // Always calculate manually for precision
                    }
                  } else {
-                   marketCap = rawMarketCap;
+                   marketCap = 0; // Always calculate manually for precision
                  }
                }
              }
              
-             // Get previous close data
-             const prevUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`;
-             const prevResponse = await fetch(prevUrl);
+                         // GPT Single-Source-of-Truth: Get reference price with fallback
+            let referencePrice: number | null = null;
+            
+            // 1. Primary: Use daily aggregates /prev (most reliable)
+            try {
+              const prevUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`;
+              const prevResponse = await fetch(prevUrl);
+              
+              if (prevResponse.ok) {
+                const prevData = await prevResponse.json();
+                console.log(`📊 Prev data for ${ticker}:`, JSON.stringify(prevData, null, 2));
+                
+                if (prevData?.results?.[0]?.c) {
+                  referencePrice = prevData.results[0].c;
+                  console.log(`✅ Using aggs/prev reference: $${referencePrice} for ${ticker}`);
+                }
+              } else {
+                const errorBody = await prevResponse.text();
+                console.warn(`⚠️ aggs/prev failed for ${ticker}:`, {
+                  status: prevResponse.status,
+                  body: errorBody
+                });
+              }
+            } catch (error) {
+              console.warn(`⚠️ aggs/prev exception for ${ticker}:`, error);
+            }
 
-             if (!prevResponse.ok) {
-               const errorBody = await prevResponse.text();
-               console.error(`❌ Polygon API failed for ${ticker} (prev):`, {
-                 status: prevResponse.status,
-                 body: errorBody,
-                 url: prevUrl,
-               });
-               return null;
-             }
+            // 💡 PRECISION IMPROVEMENT: Get consolidated last trade first (more accurate than snapshot)
+            let consolidatedLastPrice = null;
+            let consolidatedDataSource = '';
+            
+            try {
+              const lastTradeUrl = `https://api.polygon.io/v2/last/trade/${ticker}?apikey=${apiKey}`;
+              const lastTradeResponse = await fetch(lastTradeUrl);
+              
+              if (lastTradeResponse.ok) {
+                const lastTradeData = await lastTradeResponse.json();
+                if (lastTradeData.status === 'OK' && lastTradeData.results?.p > 0) {
+                  consolidatedLastPrice = lastTradeData.results.p;
+                  consolidatedDataSource = 'consolidatedLastTrade';
+                  console.log(`🎯 Consolidated last trade for ${ticker}: $${consolidatedLastPrice}`);
+                } else if (lastTradeData.status === 'DELAYED') {
+                  // Still use delayed data if available
+                  consolidatedLastPrice = lastTradeData.results.p;
+                  consolidatedDataSource = 'consolidatedLastTrade(delayed)';
+                  console.log(`⏱️ Delayed consolidated last trade for ${ticker}: $${consolidatedLastPrice}`);
+                }
+              } else {
+                console.warn(`⚠️ Consolidated last trade failed for ${ticker}, falling back to snapshot`);
+              }
+            } catch (error) {
+              console.warn(`⚠️ Consolidated last trade error for ${ticker}:`, error);
+            }
 
-             const prevData = await prevResponse.json();
-             console.log(`📊 Prev data for ${ticker}:`, JSON.stringify(prevData, null, 2));
-
-             if (!prevData?.results?.[0]?.c) {
-               console.warn(`❌ No valid prev data for ${ticker} - missing required fields`);
-               console.warn(`   prevData?.results?.[0]?.c: ${prevData?.results?.[0]?.c}`);
-               console.warn(`   Full response:`, JSON.stringify(prevData, null, 2));
-               return null;
-             }
-
-             const prevClose = prevData.results[0].c;
-
-                         // Get current price using modern snapshot API (includes pre-market, after-hours)
+            // Get current price using modern snapshot API (includes pre-market, after-hours)
             const snapshotUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apikey=${apiKey}`;
             const snapshotResponse = await fetch(snapshotUrl);
 
@@ -360,6 +388,21 @@ class StockDataCache {
 
             const snapshotData = await snapshotResponse.json();
             console.log(`📊 Snapshot data for ${ticker}:`, JSON.stringify(snapshotData, null, 2));
+            
+            // 2. Fallback: Use snapshot prevDay (if aggs/prev failed)
+            if (!referencePrice && snapshotData.ticker?.prevDay?.c) {
+              referencePrice = snapshotData.ticker.prevDay.c;
+              console.log(`🔄 Using snapshot fallback reference: $${referencePrice} for ${ticker}`);
+            }
+            
+            // 3. Final check: Skip if no reference price available
+            if (!referencePrice) {
+              console.warn(`❌ No valid reference price for ${ticker} - skipping`);
+              return null;
+            }
+            
+            // Update prevClose with our single-source-of-truth reference
+            const prevClose = referencePrice;
 
             // Validate snapshot status
             if (snapshotData.status !== 'OK') {
@@ -367,22 +410,29 @@ class StockDataCache {
               return null;
             }
 
-            // Use last trade price (most accurate), then minute data, then day close, then previous day close as fallback
+            // 🎯 IMPROVED PRIORITY ORDER: Consolidated Last Trade → Snapshot → Fallbacks
             let currentPrice = 0;
             let dataSource = '';
             
-            // Priority order for current price
-            if (snapshotData.ticker?.lastTrade?.p && snapshotData.ticker.lastTrade.p > 0) {
+            // Priority order for current price (PRECISION IMPROVEMENT)
+            if (consolidatedLastPrice && consolidatedLastPrice > 0) {
+              // 1. HIGHEST PRIORITY: Consolidated Last Trade (most accurate)
+              currentPrice = consolidatedLastPrice;
+              dataSource = consolidatedDataSource;
+            } else if (snapshotData.ticker?.lastTrade?.p && snapshotData.ticker.lastTrade.p > 0) {
+              // 2. Snapshot last trade (fallback)
               currentPrice = snapshotData.ticker.lastTrade.p;
-              dataSource = 'lastTrade';
+              dataSource = 'snapshotLastTrade';
             } else if (snapshotData.ticker?.min?.c && snapshotData.ticker.min.c > 0) {
+              // 3. Minute data
               currentPrice = snapshotData.ticker.min.c;
               dataSource = 'minute';
             } else if (snapshotData.ticker?.day?.c && snapshotData.ticker.day.c > 0) {
+              // 4. Day close
               currentPrice = snapshotData.ticker.day.c;
               dataSource = 'day';
             } else if (snapshotData.ticker?.prevDay?.c && snapshotData.ticker.prevDay.c > 0) {
-              // Use prevDay data but check if it's different from prevClose to avoid 0% changes
+              // 5. Previous day close (last resort)
               const prevDayClose = snapshotData.ticker.prevDay.c;
               if (Math.abs(prevDayClose - prevClose) < 0.01) {
                 // Same as prevClose, would result in 0% change - skip
@@ -426,8 +476,7 @@ class StockDataCache {
               }
             }
             
-            // Determine reference price based on available data
-            let referencePrice = prevClose;
+            // Reference price already determined above using single-source-of-truth approach
             
             // If no Polygon session type, determine session label based on data availability
             if (!snapshotData.ticker?.type) {
@@ -488,16 +537,11 @@ class StockDataCache {
             const shareCount = shares || this.shareCounts[ticker];
             
             // Fix market cap calculation - avoid double counting when Polygon provides live market cap
-            const usesLiveCap = marketCap > 0;
-            const baseMarketCap = usesLiveCap
-              ? marketCap / 1_000_000_000  // Polygon's live market cap
-              : (prevClose * shareCount) / 1_000_000_000;  // Calculate from previous close
-            
-            const marketCapDiff = (currentPrice - prevClose) * shareCount / 1_000_000_000;
-            
-            const finalMarketCap = usesLiveCap
-              ? baseMarketCap  // Already "live" - don't add diff
-              : baseMarketCap + marketCapDiff;  // Calculate current from base + diff
+            // GPT Recommendation: Always calculate market caps manually for precision
+            const calculatedMarketCap = currentPrice * shareCount / 1_000_000_000;
+            const marketCapPrev = prevClose * shareCount / 1_000_000_000;  
+            const marketCapDiff = calculatedMarketCap - marketCapPrev;
+            const finalMarketCap = calculatedMarketCap;
 
             const stockData = {
               ticker,
