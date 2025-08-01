@@ -4,9 +4,9 @@ import { initializePreloading } from '@/lib/preload'
 import { initializePWA } from '@/lib/sw-register'
 
 export const metadata: Metadata = {
-  title: 'PreMarketPrice.com - Real-Time Pre-Market Stock Tracking | Top 200 US Companies',
-  description: 'Track real-time pre-market movements of the top 200 US companies. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist. Get live stock data before market opens.',
-  keywords: 'pre-market stocks, stock tracking, market cap, stock prices, US stocks, stock portfolio, real-time stock data, pre-market trading, stock analysis, market movements',
+  title: 'Pre-Market Stock Tracking | Top 300 Companies - PreMarketPrice',
+  description: 'Track pre-market movements of top 300 companies globally. Monitor changes, market cap fluctuations and build your watchlist free.',
+  keywords: 'pre-market stocks, stock tracking, market cap, stock prices, global stocks, stock portfolio, pre-market trading, stock analysis, market movements',
   authors: [{ name: 'PreMarketPrice.com' }],
   creator: 'PreMarketPrice.com',
   publisher: 'PreMarketPrice.com',
@@ -20,8 +20,8 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'PreMarketPrice.com - Real-Time Pre-Market Stock Tracking',
-    description: 'Track real-time pre-market movements of the top 200 US companies. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.',
+    title: 'Pre-Market Stock Tracking | Top 300 Companies - PreMarketPrice',
+    description: 'Track pre-market movements of top 300 companies globally. Monitor changes, market cap fluctuations and build your watchlist free.',
     url: 'https://premarketprice.com',
     siteName: 'PreMarketPrice.com',
     images: [
@@ -37,8 +37,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'PreMarketPrice.com - Real-Time Pre-Market Stock Tracking',
-    description: 'Track real-time pre-market movements of the top 200 US companies.',
+    title: 'Pre-Market Stock Tracking | Top 300 Companies - PreMarketPrice',
+    description: 'Track pre-market movements of top 300 companies globally. Build your watchlist free.',
     images: ['/og-image.png'],
   },
   robots: {
@@ -74,7 +74,7 @@ export default function RootLayout({
         {/* Preload critical resources */}
         <link rel="preload" href="/favicon.ico" as="image" type="image/x-icon" />
         <link rel="preload" href="/og-image.png" as="image" type="image/png" />
-        <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" crossOrigin="anonymous" />
+        <link rel="preload" href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800&display=swap" as="style" crossOrigin="anonymous" />
         
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://logo.clearbit.com" />
@@ -95,7 +95,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebApplication",
               "name": "PreMarketPrice.com",
-              "description": "Real-time pre-market stock tracking for top 200 US companies",
+              "description": "Track pre-market movements of top 300 companies globally. Build your watchlist free.",
               "url": "https://premarketprice.com",
               "applicationCategory": "FinanceApplication",
               "operatingSystem": "Web Browser",
@@ -111,12 +111,18 @@ export default function RootLayout({
               "publisher": {
                 "@type": "Organization",
                 "name": "PreMarketPrice.com"
+              },
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://premarketprice.com/?search={search_term_string}",
+                "query-input": "required name=search_term_string"
               }
             })
           }}
         />
       </head>
       <body>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet" />
         {children}
       </body>
     </html>

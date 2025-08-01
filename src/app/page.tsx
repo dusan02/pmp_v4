@@ -147,7 +147,7 @@ export default function HomePage() {
         
         // If cache is updating, show loading message instead of error
         if (result.message && result.message.includes('cache')) {
-          setError('Loading real-time data... Please wait.');
+          setError('Loading data... Please wait.');
           // Keep existing data if we have it, otherwise use mock
           if (stockData.length === 0) {
             setStockData(mockStocks);
@@ -273,36 +273,65 @@ export default function HomePage() {
 
 
   return (
-    <div className="container">
-      <div className="header">
+    <main className="container">
+      <header className="header" aria-label="Main site header">
         {/* Top Row: Brand + Market Indicators */}
         <div className="header-top">
           <div className="brand-section">
-            <h1 className="brand-heading">
-              <span className="brand-dark">Pre</span>
-              <span className="brand-gradient">Market</span>
-              <span className="brand-dark">Price</span><span className="brand-dark">.com</span>
+            <h1 className="brand">
+              Pre<span className="brand--bold">MarketPrice</span><span className="brand--accent">.com</span>
             </h1>
-            <div className="trading-hours-info">
-              <p><strong>Live prices available from 4:00 AM to 8:00 PM EST daily</strong> • Pre-market (4:00-9:30 AM) • Market hours (9:30 AM-4:00 PM) • After-hours (4:00-8:00 PM)</p>
-            </div>
+
             <div className="description-section">
-              <p>Track real-time pre-market movements of the top 300 largest companies traded globally. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
+              <h3 className="visually-hidden">Stock Tracking Platform Description</h3>
+              <p>Track pre-market movements of top 300 companies globally.</p>
+              <ul className="features-list">
+                <li>Monitor changes</li>
+                <li>Market cap fluctuations</li>
+                <li>Build your watchlist</li>
+              </ul>
             </div>
           </div>
                      <div className="actions-section">
+             {/* Trading Hours Info Box */}
+             <div className="trading-hours-box">
+               <h3 className="trading-hours-title">⏰ Market Hours</h3>
+               <div className="trading-hours-content">
+                 <div className="hours-main">
+                   <strong>Live prices: 4:00 AM - 8:00 PM EST</strong>
+                 </div>
+                 <ul className="hours-list">
+                   <li className="hours-item pre-market">
+                     <span className="bullet">•</span>
+                     <span className="session-name">Pre-market</span>
+                     <span className="session-time">4:00 - 9:30 AM</span>
+                   </li>
+                   <li className="hours-item market-hours">
+                     <span className="bullet">•</span>
+                     <span className="session-name">Market hours</span>
+                     <span className="session-time">9:30 AM - 4:00 PM</span>
+                   </li>
+                   <li className="hours-item after-hours">
+                     <span className="bullet">•</span>
+                     <span className="session-name">After-hours</span>
+                     <span className="session-time">4:00 - 8:00 PM</span>
+                   </li>
+                 </ul>
+               </div>
+             </div>
+
              {/* Background Status */}
              {backgroundStatus && (
                <div className="background-status">
                  <Activity size={14} className={backgroundStatus.isRunning ? 'text-green-600' : 'text-red-600'} />
                  <span className="text-xs text-gray-600">
-                   {backgroundStatus.isRunning ? 'Auto-updating' : 'Manual mode'}
+                   {backgroundStatus.isRunning ? 'Auto-updating every 5 minutes' : 'Manual mode'}
                  </span>
                </div>
              )}
            </div>
         </div>
-      </div>
+      </header>
 
       {error && (
         <div className="error">
@@ -313,10 +342,13 @@ export default function HomePage() {
       )}
 
       {favoriteStocks.length > 0 && (
-        <section className="favorites">
-          <h2 data-icon="⭐">Favorites</h2>
-                  <table>
-          <thead>
+        <section className="favorites" aria-labelledby="favorites-heading">
+          <h2 id="favorites-heading" data-icon="⭐">Favorites</h2>
+          <table aria-describedby="favorites-description">
+            <caption id="favorites-description">
+              Your favorite stocks with current prices and market cap changes
+            </caption>
+            <thead>
             <tr>
               <th>Logo</th>
               <th onClick={() => requestFavSort("ticker" as SortKey)} className="sortable">
@@ -380,9 +412,9 @@ export default function HomePage() {
         </section>
       )}
 
-      <section className="all-stocks">
+      <section className="all-stocks" aria-labelledby="all-stocks-heading">
         <div className="section-header">
-          <h2 data-icon="📊">All Stocks</h2>
+          <h2 id="all-stocks-heading" data-icon="📊">All Stocks</h2>
           <div className="search-container">
             <input
               type="text"
@@ -390,13 +422,15 @@ export default function HomePage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
+              aria-label="Search stocks by company name or ticker"
             />
           </div>
         </div>
 
-
-
-        <table>
+        <table aria-describedby="all-stocks-description">
+          <caption id="all-stocks-description">
+            Stock data with current prices and market movements
+          </caption>
           <thead>
             <tr>
               <th>Logo</th>
@@ -465,18 +499,18 @@ export default function HomePage() {
 
       </section>
 
-      <div className="footer">
+      <footer className="footer" aria-label="Site footer">
         <p>Data provided by Polygon.io • Powered by Next.js</p>
+        <p className="disclaimer">
+          Data is for informational purposes only. We are not responsible for its accuracy.
+        </p>
         <p>
-          <a
-            href="https://kiddobank.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Visit Kiddobank.com
+          Need help? Contact us: 
+          <a href="mailto:support@premarketprice.com" className="support-email">
+            support@premarketprice.com
           </a>
         </p>
-             </div>
-     </div>
+      </footer>
+     </main>
    );
  } 
