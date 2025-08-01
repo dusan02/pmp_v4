@@ -7,15 +7,22 @@ export async function GET(request: NextRequest) {
     const tickers = searchParams.get('tickers');
     const refresh = searchParams.get('refresh') === 'true';
 
-    // Hardcoded API key to eliminate .env.local dependency issues
-    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
-    console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
+      // Hardcoded API key for reliability (avoids .env.local issues)
+  const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+  console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
 
-    // Always trigger cache update if no data exists
+    // Get current cache status
     const cacheStatus = await stockDataCache.getCacheStatus();
-    if (cacheStatus.count === 0 || refresh) {
-      console.log('Cache is empty or refresh requested, updating...');
-      await stockDataCache.updateCache();
+    
+    // If cache is empty, trigger background update but return immediately with mock data
+    if (cacheStatus.count === 0) {
+      console.log('Cache is empty, triggering background update...');
+      // Don't await - let it run in background
+      stockDataCache.updateCache().catch(err => console.error('Background cache update failed:', err));
+    } else if (refresh) {
+      console.log('Refresh requested, updating cache in background...');
+      // Don't await - let it run in background for refresh requests too
+      stockDataCache.updateCache().catch(err => console.error('Background cache refresh failed:', err));
     }
 
     if (tickers) {
@@ -34,10 +41,19 @@ export async function GET(request: NextRequest) {
       // Return all stocks
       const allStocks = await stockDataCache.getAllStocks();
       
+      // If no cached data available, return empty array (frontend will use mock data)
+      if (allStocks.length === 0) {
+        return NextResponse.json({
+          data: [],
+          cacheStatus,
+          message: 'Cache is updating in background, please wait...'
+        });
+      }
+      
       return NextResponse.json({
         data: allStocks,
         cacheStatus,
-        message: refresh ? 'Cache refreshed and all data returned' : 'All data from cache'
+        message: refresh ? 'Cache refreshing in background' : 'All data from cache'
       });
     }
 

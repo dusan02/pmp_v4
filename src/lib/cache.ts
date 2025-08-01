@@ -1,11 +1,30 @@
 import { getCachedData, setCachedData, getCacheStatus, setCacheStatus, CACHE_KEYS } from './redis';
 import { dbHelpers, runTransaction, initializeDatabase } from './database';
 import { createBackgroundService } from './backgroundService';
-import { recordCacheHit, recordCacheMiss, recordStockUpdate, recordApiCall } from './prometheus';
+import { recordCacheHit, recordCacheMiss, recordApiCall } from './prometheus';
+
+// Market session detection utility
+function getMarketSession(): 'pre-market' | 'market' | 'after-hours' | 'closed' {
+  const now = new Date();
+  const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+  const hour = easternTime.getHours();
+  const minute = easternTime.getMinutes();
+  const day = easternTime.getDay(); // 0 = Sunday, 6 = Saturday
+  
+  // Weekend check
+  if (day === 0 || day === 6) return 'closed';
+  
+  // Weekday sessions (Eastern Time)
+  if (hour < 4) return 'closed';
+  if (hour < 9 || (hour === 9 && minute < 30)) return 'pre-market';
+  if (hour < 16) return 'market';
+  if (hour < 20) return 'after-hours';
+  return 'closed';
+}
 
 interface CachedStockData {
   ticker: string;
-  preMarketPrice: number;
+  currentPrice: number;  // Renamed from preMarketPrice - works for all sessions
   closePrice: number;
   percentChange: number;
   marketCapDiff: number;
@@ -25,7 +44,7 @@ class StockDataCache {
     'PG', 'BAC', 'ABBV', 'CVX', 'KO', 'AMD', 'GE', 'CSCO', 'TMUS', 'WFC', 'CRM',
     'PM', 'IBM', 'UNH', 'MS', 'GS', 'INTU', 'LIN', 'ABT', 'AXP', 'BX', 'DIS', 'MCD',
     'RTX', 'NOW', 'MRK', 'CAT', 'T', 'PEP', 'UBER', 'BKNG', 'TMO', 'VZ', 'SCHW', 'ISRG',
-    'QCOM', 'C', 'TXN', 'BA', 'BLK', 'GEV', 'ACN', 'SPGI', 'AMGN', 'ADBE', 'BSX', 'SYK',
+    'QCOM', 'C', 'TXN', 'BA', 'BLK', 'ACN', 'SPGI', 'AMGN', 'ADBE', 'BSX', 'SYK',
     'ETN', 'AMAT', 'ANET', 'NEE', 'DHR', 'HON', 'TJX', 'PGR', 'GILD', 'DE', 'PFE', 'COF',
     'KKR', 'PANW', 'UNP', 'APH', 'LOW', 'LRCX', 'MU', 'ADP', 'CMCSA', 'COP', 'KLAC',
     'VRTX', 'MDT', 'SNPS', 'NKE', 'CRWD', 'ADI', 'WELL', 'CB', 'ICE', 'SBUX', 'TT',
@@ -200,10 +219,10 @@ class StockDataCache {
     console.log('Starting cache update...');
 
     try {
-                   // Hardcoded API key to eliminate .env.local dependency issues
-      const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
-      console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
-             const batchSize = 20; // Process in batches to avoid rate limits
+                           // Hardcoded API key for reliability (avoids .env.local issues)
+        const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+        console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
+             const batchSize = 15; // Reduced batch size for better reliability
        const results: CachedStockData[] = [];
 
                // Test first API call to see exact error
@@ -234,15 +253,32 @@ class StockDataCache {
           recordApiCall('polygon', 'snapshot', 'success');
         }
 
-       // Process tickers in batches with rate limiting
-       for (let i = 0; i < this.TICKERS.length; i += batchSize) {
-        const batch = this.TICKERS.slice(i, i + batchSize);
-        
-        // Add delay between batches to respect rate limits
-        if (i > 0) {
-          console.log(`⏳ Rate limiting: waiting 1 second between batches...`);
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
+       // Process tickers in parallel groups with smart throttling
+       const parallelGroups = 4; // Number of parallel Promise.allSettled groups
+       const groupSize = Math.ceil(this.TICKERS.length / parallelGroups);
+       
+       for (let groupIndex = 0; groupIndex < parallelGroups; groupIndex++) {
+         const groupStart = groupIndex * groupSize;
+         const groupEnd = Math.min(groupStart + groupSize, this.TICKERS.length);
+         const groupTickers = this.TICKERS.slice(groupStart, groupEnd);
+         
+         console.log(`🚀 Processing group ${groupIndex + 1}/${parallelGroups} (${groupTickers.length} tickers)`);
+         
+         // Add delay between groups to respect rate limits
+         if (groupIndex > 0) {
+           console.log(`⏳ Rate limiting: waiting 250ms between groups...`);
+           await new Promise(resolve => setTimeout(resolve, 250));
+         }
+         
+         // Process group in smaller batches
+         for (let i = 0; i < groupTickers.length; i += batchSize) {
+           const batch = groupTickers.slice(i, i + batchSize);
+           
+           // Add delay between batches within group
+           if (i > 0) {
+             console.log(`⏳ Rate limiting: waiting 200ms between batches...`);
+             await new Promise(resolve => setTimeout(resolve, 200));
+           }
         
         const batchPromises = batch.map(async (ticker) => {
           try {
@@ -263,8 +299,22 @@ class StockDataCache {
              } else {
                const detailsData = await detailsResponse.json();
                if (detailsData?.results) {
-                 marketCap = detailsData.results.market_cap || 0;
+                 const rawMarketCap = detailsData.results.market_cap || 0;
                  shares = detailsData.results.share_class_shares_outstanding || 0;
+                 
+                 // Check if market cap data is fresh (< 60 seconds old)
+                 const updatedTimestamp = detailsData.results.updated;
+                 if (rawMarketCap > 0 && updatedTimestamp) {
+                   const ageMs = Date.now() - updatedTimestamp;
+                   if (ageMs > 60000) { // Older than 60 seconds
+                     console.warn(`⚠️ Stale market cap for ${ticker} (${Math.round(ageMs/1000)}s old), using calculated instead`);
+                     marketCap = 0; // Force calculation
+                   } else {
+                     marketCap = rawMarketCap;
+                   }
+                 } else {
+                   marketCap = rawMarketCap;
+                 }
                }
              }
              
@@ -294,40 +344,164 @@ class StockDataCache {
 
              const prevClose = prevData.results[0].c;
 
-             // Get current price (including pre-market)
-             const lastUrl = `https://api.polygon.io/v1/last/stocks/${ticker}?apiKey=${apiKey}`;
-             const lastResponse = await fetch(lastUrl);
+                         // Get current price using modern snapshot API (includes pre-market, after-hours)
+            const snapshotUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apikey=${apiKey}`;
+            const snapshotResponse = await fetch(snapshotUrl);
 
-             if (!lastResponse.ok) {
-               const errorBody = await lastResponse.text();
-               console.error(`❌ Polygon API failed for ${ticker} (last):`, {
-                 status: lastResponse.status,
-                 body: errorBody,
-                 url: lastUrl,
-               });
-               return null;
-             }
+            if (!snapshotResponse.ok) {
+              const errorBody = await snapshotResponse.text();
+              console.error(`❌ Polygon API failed for ${ticker} (snapshot):`, {
+                status: snapshotResponse.status,
+                body: errorBody,
+                url: snapshotUrl,
+              });
+              return null;
+            }
 
-             const lastData = await lastResponse.json();
-             console.log(`📊 Last data for ${ticker}:`, JSON.stringify(lastData, null, 2));
+            const snapshotData = await snapshotResponse.json();
+            console.log(`📊 Snapshot data for ${ticker}:`, JSON.stringify(snapshotData, null, 2));
 
-             if (!lastData?.last?.price) {
-               console.warn(`❌ No valid last data for ${ticker} - missing required fields`);
-               console.warn(`   lastData?.last?.price: ${lastData?.last?.price}`);
-               console.warn(`   Full response:`, JSON.stringify(lastData, null, 2));
-               return null;
-             }
+            // Validate snapshot status
+            if (snapshotData.status !== 'OK') {
+              console.warn(`❌ Invalid snapshot status for ${ticker}: ${snapshotData.status}`);
+              return null;
+            }
 
-             const currentPrice = lastData.last.price;
-            const percentChange = ((currentPrice - prevClose) / prevClose) * 100;
+            // Use last trade price (most accurate), then minute data, then day close, then previous day close as fallback
+            let currentPrice = 0;
+            let dataSource = '';
             
-            // Use Polygon's market cap if available, otherwise calculate
-            const finalMarketCap = marketCap > 0 ? marketCap / 1_000_000_000 : (currentPrice * shares) / 1_000_000_000;
-            const marketCapDiff = (currentPrice - prevClose) * (shares || this.shareCounts[ticker] || 1000000000) / 1_000_000_000;
+            // Priority order for current price
+            if (snapshotData.ticker?.lastTrade?.p && snapshotData.ticker.lastTrade.p > 0) {
+              currentPrice = snapshotData.ticker.lastTrade.p;
+              dataSource = 'lastTrade';
+            } else if (snapshotData.ticker?.min?.c && snapshotData.ticker.min.c > 0) {
+              currentPrice = snapshotData.ticker.min.c;
+              dataSource = 'minute';
+            } else if (snapshotData.ticker?.day?.c && snapshotData.ticker.day.c > 0) {
+              currentPrice = snapshotData.ticker.day.c;
+              dataSource = 'day';
+            } else if (snapshotData.ticker?.prevDay?.c && snapshotData.ticker.prevDay.c > 0) {
+              // Use prevDay data but check if it's different from prevClose to avoid 0% changes
+              const prevDayClose = snapshotData.ticker.prevDay.c;
+              if (Math.abs(prevDayClose - prevClose) < 0.01) {
+                // Same as prevClose, would result in 0% change - skip
+                console.warn(`⚠️ ${ticker} prevDay.c ($${prevDayClose}) same as prevClose ($${prevClose}), skipping to avoid 0% change`);
+                return null;
+              }
+              currentPrice = prevDayClose;
+              dataSource = 'prevDay';
+            }
+
+            if (!currentPrice || currentPrice === 0) {
+              console.warn(`❌ No valid price data for ${ticker} - all price fields are 0 or missing`);
+              console.warn(`   lastTrade.p: ${snapshotData?.ticker?.lastTrade?.p}`);
+              console.warn(`   min.c: ${snapshotData?.ticker?.min?.c}`);
+              console.warn(`   day.c: ${snapshotData?.ticker?.day?.c}`);
+              console.warn(`   prevDay.c: ${snapshotData?.ticker?.prevDay?.c}`);
+              return null;
+            }
+            
+            // Get market session - use Polygon's snapshot type if available, otherwise fallback to time-based
+            let marketSession = getMarketSession(); // Fallback
+            let sessionLabel = 'Regular';
+            
+            // Use Polygon's snapshot type for more accurate session detection
+            if (snapshotData.ticker?.type) {
+              switch (snapshotData.ticker.type) {
+                case 'pre':
+                  marketSession = 'pre-market';
+                  sessionLabel = 'Pre-Market';
+                  break;
+                case 'post':
+                  marketSession = 'after-hours';
+                  sessionLabel = 'After-Hours';
+                  break;
+                case 'regular':
+                  marketSession = 'market';
+                  sessionLabel = 'Market';
+                  break;
+                default:
+                  sessionLabel = 'Closed';
+              }
+            }
+            
+            // Determine reference price based on available data
+            let referencePrice = prevClose;
+            
+            // If no Polygon session type, determine session label based on data availability
+            if (!snapshotData.ticker?.type) {
+              if (snapshotData.ticker?.min?.c && snapshotData.ticker.min.c > 0) {
+                // We have real-time minute data
+                switch (marketSession) {
+                  case 'pre-market':
+                    sessionLabel = 'Pre-Market';
+                    break;
+                  case 'market':
+                    sessionLabel = 'Market';
+                    break;
+                  case 'after-hours':
+                    sessionLabel = 'After-Hours';
+                    break;
+                  default:
+                    sessionLabel = 'Live';
+                }
+              } else if (snapshotData.ticker?.day?.c && snapshotData.ticker.day.c > 0) {
+                sessionLabel = 'Market Close';
+              } else {
+                sessionLabel = 'Previous Close';
+              }
+            }
+            
+            // Edge case protection
+            
+            // 1. Check for negative prices (penny stock glitches)
+            if (referencePrice < 0.01) {
+              console.warn(`⚠️ Suspiciously low reference price for ${ticker}: $${referencePrice}, skipping`);
+              return null;
+            }
+            
+            // 2. Check for trading halts (stale lastTrade timestamp)
+            if (snapshotData.ticker?.lastTrade?.t) {
+              const tradeAgeMs = Date.now() - (snapshotData.ticker.lastTrade.t / 1000000); // Convert nanoseconds to ms
+              if (tradeAgeMs > 120000 && snapshotData.ticker.type === 'regular') { // 2 minutes old during market hours
+                console.warn(`⚠️ Possible trading halt for ${ticker}: last trade ${Math.round(tradeAgeMs/1000)}s ago`);
+                // Continue processing but mark in logs
+              }
+            }
+            
+            const percentChange = ((currentPrice - referencePrice) / referencePrice) * 100;
+            
+            // 3. Check for extreme percentage changes (possible stock splits)
+            if (Math.abs(percentChange) > 40) {
+              console.warn(`⚠️ Extreme price change for ${ticker}: ${percentChange.toFixed(2)}% - possible stock split or data error`);
+              // Continue processing but log warning
+            }
+            
+            console.log(`📊 ${sessionLabel} session for ${ticker}: $${currentPrice} (${dataSource}) vs ref $${referencePrice} (${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%)`);
+            
+            // Validate share count - no more 1B fallback
+            if (!shares && !this.shareCounts[ticker]) {
+              console.warn(`❌ Missing share count for ${ticker}, skipping stock`);
+              return null;
+            }
+            const shareCount = shares || this.shareCounts[ticker];
+            
+            // Fix market cap calculation - avoid double counting when Polygon provides live market cap
+            const usesLiveCap = marketCap > 0;
+            const baseMarketCap = usesLiveCap
+              ? marketCap / 1_000_000_000  // Polygon's live market cap
+              : (prevClose * shareCount) / 1_000_000_000;  // Calculate from previous close
+            
+            const marketCapDiff = (currentPrice - prevClose) * shareCount / 1_000_000_000;
+            
+            const finalMarketCap = usesLiveCap
+              ? baseMarketCap  // Already "live" - don't add diff
+              : baseMarketCap + marketCapDiff;  // Calculate current from base + diff
 
             const stockData = {
               ticker,
-              preMarketPrice: Math.round(currentPrice * 100) / 100,
+              currentPrice: Math.round(currentPrice * 100) / 100,  // Renamed from preMarketPrice
               closePrice: Math.round(prevClose * 100) / 100,
               percentChange: Math.round(percentChange * 100) / 100,
               marketCapDiff: Math.round(marketCapDiff * 100) / 100,
@@ -340,7 +514,7 @@ class StockDataCache {
             // Save to database
             try {
               const companyName = this.companyNames[ticker] || ticker;
-              const shareCount = shares || this.shareCounts[ticker] || 1000000000;
+              const shareCount = shares || this.shareCounts[ticker];
               
               runTransaction(() => {
                 // Update stock info
@@ -352,11 +526,11 @@ class StockDataCache {
                   new Date().toISOString()
                 );
 
-                                 // Add price history
+                                 // Add price history with session info
                  dbHelpers.addPriceHistory.run(
                    ticker,
                    currentPrice,
-                   lastData.last?.size || 0, // Volume
+                   snapshotData.ticker?.day?.v || 0, // Volume from snapshot
                   new Date().toISOString()
                 );
               });
@@ -374,14 +548,18 @@ class StockDataCache {
           }
         });
 
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults.filter(Boolean) as CachedStockData[]);
-
-        // Add delay between batches to respect rate limits
-        if (i + batchSize < this.TICKERS.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+           const batchResults = await Promise.allSettled(batchPromises);
+           
+           // Process settled results
+           batchResults.forEach((result, index) => {
+             if (result.status === 'fulfilled' && result.value) {
+               results.push(result.value);
+             } else if (result.status === 'rejected') {
+               console.error(`❌ Failed to process ${batch[index]}:`, result.reason);
+             }
+           });
+         }
+       }
 
       // Update in-memory cache
       this.cache.clear();
@@ -389,17 +567,25 @@ class StockDataCache {
         this.cache.set(stock.ticker, stock);
       });
 
+      // Validate results completeness
+      const successRate = (results.length / this.TICKERS.length) * 100;
+      const isPartial = successRate < 90;
+      
+      if (isPartial) {
+        console.warn(`⚠️ Partial update: only ${results.length}/${this.TICKERS.length} stocks (${successRate.toFixed(1)}%) processed successfully`);
+      }
+
       // Update Redis cache
       try {
         await setCachedData(CACHE_KEYS.STOCK_DATA, results);
         await setCacheStatus({
           count: results.length,
           lastUpdated: new Date(),
-          isUpdating: false
+          isUpdating: false,
+          isPartial: isPartial
         });
         console.log(`✅ Redis cache updated with ${results.length} stocks at ${new Date().toISOString()}`);
       } catch (error) {
-        console.error('Failed to update Redis cache:', error);
         console.error('Failed to update Redis cache:', error);
       }
 

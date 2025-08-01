@@ -210,13 +210,13 @@ const tickerDomains: Record<string, string> = {
   'BUD': 'ab-inbev.com', 'BTI': 'bat.com', 'BN': 'brookfield.com',
   'SMFG': 'smfg.co.jp', 'ENB': 'enbridge.com', 'RELX': 'relx.com', 'TRI': 'thomsonreuters.com', 'RACE': 'ferrari.com',
   'BBVA': 'bbva.com', 'SE': 'sea.com', 'BP': 'bp.com', 'NTES': 'netease.com', 'BMO': 'bmo.com',
-  'RIO': 'riotinto.com', 'GSK': 'gsk.com', 'MFG': 'mizuho-fg.co.jp', 'INFY': 'infosys.com',
+  'RIO': 'riotinto.com', 'GSK': 'gsk.com', 'MFG': 'mizuhogroup.com', 'INFY': 'infosys.com',
   'CP': 'cpr.ca', 'BCS': 'barclays.com', 'NGG': 'nationalgrid.com', 'BNS': 'scotiabank.com', 'ING': 'ing.com',
   'EQNR': 'equinor.com', 'CM': 'cibc.com', 'CNQ': 'cnrl.com', 'LYG': 'lloydsbankinggroup.com',
   'AEM': 'agnicoeagle.com', 'DB': 'deutsche-bank.com', 'NU': 'nu.com', 'CNI': 'cn.ca',
   'DEO': 'diageo.com', 'NWG': 'natwestgroup.com', 'AMX': 'americamovil.com', 'MFC': 'manulife.com',
   'E': 'eni.com', 'WCN': 'wasteconnections.com', 'SU': 'suncor.com', 'TRP': 'tcenergy.com', 'PBR': 'petrobras.com',
-  'HMC': 'honda.com', 'GRMN': 'garmin.com', 'CCEP': 'coca-colaep.com', 'ALC': 'alcon.com', 'TAK': 'takeda.com'
+  'HMC': 'honda.com', 'GRMN': 'garmin.com', 'CCEP': 'cocacolaep.com', 'ALC': 'alcon.com', 'TAK': 'takeda.com'
 };
 
 // Color mapping for consistent company colors

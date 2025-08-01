@@ -23,7 +23,7 @@ export default function StockTable({ stocks, favorites, toggleFavorite }: any) {
             return (
               <tr key={stock.ticker} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                 <td className="px-4 py-3 font-medium">{stock.ticker}</td>
-                <td className="px-4 py-3">${stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
+                <td className="px-4 py-3">${stock.currentPrice?.toFixed(2) || '0.00'}</td>
                 <td className="px-4 py-3">${stock.closePrice?.toFixed(2) || '0.00'}</td>
                 <td className={`px-4 py-3 font-semibold ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
                   {isPositive ? '+' : ''}

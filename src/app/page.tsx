@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { useSortableData } from '@/hooks/useSortableData';
+import { useSortableData, SortKey } from '@/hooks/useSortableData';
 import { formatBillions } from '@/lib/format';
 
 import CompanyLogo from '@/components/CompanyLogo';
@@ -11,13 +11,15 @@ import { Activity } from 'lucide-react';
 
 interface StockData {
   ticker: string;
-  preMarketPrice: number;
+  currentPrice: number;
+  closePrice: number;
   percentChange: number;
   marketCapDiff: number;
   marketCap: number;
+  lastUpdated?: string;
 }
 
-type SortKey = 'ticker' | 'marketCap' | 'preMarketPrice' | 'percentChange' | 'marketCapDiff';
+// Using SortKey from useSortableData hook
 
 export default function HomePage() {
   const [stockData, setStockData] = useState<StockData[]>([]);
@@ -38,15 +40,20 @@ export default function HomePage() {
     const fetchBackgroundStatus = async () => {
       try {
         const response = await fetch('/api/background/status');
+        if (!response.ok) {
+          console.log('Background status API not ready yet, will retry...');
+          return;
+        }
         const data = await response.json();
         if (data.success && data.data.status) {
           setBackgroundStatus(data.data.status);
         }
       } catch (error) {
-        console.error('Failed to fetch background status:', error);
+        console.log('Background status API not ready yet, will retry...', error.message);
       }
     };
 
+    // Start background status check immediately (non-blocking)
     fetchBackgroundStatus();
     const interval = setInterval(fetchBackgroundStatus, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
@@ -55,20 +62,27 @@ export default function HomePage() {
 
   // Mock data for demonstration
   const mockStocks: StockData[] = [
-    { ticker: 'NVDA', preMarketPrice: 176.36, percentChange: -0.22, marketCapDiff: -9.52, marketCap: 4231 },
-    { ticker: 'MSFT', preMarketPrice: 512.09, percentChange: -0.08, marketCapDiff: -3.06, marketCap: 3818 },
-    { ticker: 'AAPL', preMarketPrice: 212.14, percentChange: -0.89, marketCapDiff: -28.60, marketCap: 3194 },
-    { ticker: 'AMZN', preMarketPrice: 231.47, percentChange: -0.57, marketCapDiff: -14.01, marketCap: 2457 },
-    { ticker: 'GOOGL', preMarketPrice: 195.13, percentChange: 1.32, marketCapDiff: 14.84, marketCap: 2336 },
-    { ticker: 'META', preMarketPrice: 709.81, percentChange: -1.09, marketCapDiff: -16.98, marketCap: 1792 },
-    { ticker: 'AVGO', preMarketPrice: 298.67, percentChange: 1.48, marketCapDiff: 20.55, marketCap: 1365 },
-    { ticker: 'BRK.B', preMarketPrice: 380.40, percentChange: 0.40, marketCapDiff: 1.6, marketCap: 300 }
+    { ticker: 'NVDA', currentPrice: 176.36, closePrice: 177.87, percentChange: -0.22, marketCapDiff: -9.52, marketCap: 4231 },
+    { ticker: 'MSFT', currentPrice: 512.09, closePrice: 533.50, percentChange: -0.08, marketCapDiff: -3.06, marketCap: 3818 },
+    { ticker: 'AAPL', currentPrice: 212.14, closePrice: 207.57, percentChange: -0.89, marketCapDiff: -28.60, marketCap: 3194 },
+    { ticker: 'AMZN', currentPrice: 231.47, closePrice: 182.31, percentChange: -0.57, marketCapDiff: -14.01, marketCap: 2457 },
+    { ticker: 'GOOGL', currentPrice: 195.13, closePrice: 192.63, percentChange: 1.32, marketCapDiff: 14.84, marketCap: 2336 },
+    { ticker: 'META', currentPrice: 709.81, closePrice: 717.59, percentChange: -1.09, marketCapDiff: -16.98, marketCap: 1792 },
+    { ticker: 'AVGO', currentPrice: 298.67, closePrice: 294.31, percentChange: 1.48, marketCapDiff: 20.55, marketCap: 1365 },
+    { ticker: 'BRK.B', currentPrice: 380.40, closePrice: 378.89, percentChange: 0.40, marketCapDiff: 1.6, marketCap: 300 }
   ];
 
   useEffect(() => {
-    // Fetch real data on startup with force refresh
-    console.log('🚀 App starting, fetching data...');
-    fetchStockData(true); // Force refresh on startup
+    // Load cached data immediately for fast page load
+    console.log('🚀 App starting, loading cached data...');
+    
+    const initializeData = async () => {
+      // Load cached data first (fast)
+      console.log('📊 Loading cached data for instant display...');
+      fetchStockData(false); // Use cache first for speed
+    };
+    
+    initializeData();
     
     // Auto-refresh every 30 seconds to ensure data is up to date
     const interval = setInterval(() => {
@@ -80,7 +94,8 @@ export default function HomePage() {
 
   const fetchStockData = async (refresh = false) => {
     setLoading(true);
-    setError(null);
+    setError(null); // Clear any previous errors
+    console.log('🔄 Fetching stock data...');
 
     try {
       // Use cached API endpoint with cache busting
@@ -102,9 +117,29 @@ export default function HomePage() {
       // Check if we have valid data
       if (result.data && result.data.length > 0) {
         console.log('✅ Received real data from API:', result.data.length, 'stocks');
-        setStockData(result.data);
-        // Clear any previous errors if we have data
+        console.log('🔍 DEBUG: First stock data:', JSON.stringify(result.data[0], null, 2));
+        console.log('🔍 DEBUG: First stock currentPrice type:', typeof result.data[0].currentPrice);
+        console.log('🔍 DEBUG: First stock currentPrice value:', result.data[0].currentPrice);
+        
+        // 💡 FIX: Ensure all numeric fields are actually numbers
+        const normalised = result.data.map((s: any) => ({
+          ...s,
+          currentPrice: Number(s.currentPrice),
+          closePrice: Number(s.closePrice),
+          percentChange: Number(s.percentChange),
+          marketCapDiff: Number(s.marketCapDiff),
+          marketCap: Number(s.marketCap),
+        }));
+        
+        console.log('🔍 DEBUG: After normalisation - first stock currentPrice:', normalised[0].currentPrice, typeof normalised[0].currentPrice);
+        
+        // Set data and log state change
+        setStockData(normalised);
+        console.log('🔍 DEBUG: setStockData called with', normalised.length, 'stocks');
+        
+        // Explicitly clear any previous errors when we have valid data
         setError(null);
+        console.log('✅ Error state cleared - showing real data');
       } else {
         // No data from API, but API is working - might be loading
         console.log('⚠️ API response OK but no data yet, data length:', result.data?.length);
@@ -217,6 +252,15 @@ export default function HomePage() {
   const { sorted: allStocksSorted, sortKey: allSortKey, ascending: allAscending, requestSort: requestAllSort } = 
     useSortableData(filteredStocks, "marketCap", false);
 
+  // DEBUG: Log stockData changes
+  useEffect(() => {
+    if (stockData.length > 0) {
+      console.log('🔍 STOCKDATA STATE UPDATE:', stockData.length, 'stocks');
+      console.log('🔍 FIRST STOCK IN STATE:', stockData[0]);
+      console.log('🔍 FIRST STOCK currentPrice:', stockData[0].currentPrice, typeof stockData[0].currentPrice);
+    }
+  }, [stockData]);
+
 
 
   const renderSortIcon = (key: SortKey, currentSortKey: SortKey, ascending: boolean) => {
@@ -284,9 +328,9 @@ export default function HomePage() {
                 Market Cap&nbsp;(B)
                 {renderSortIcon("marketCap", favSortKey, favAscending)}
               </th>
-              <th onClick={() => requestFavSort("preMarketPrice" as SortKey)} className="sortable">
+              <th onClick={() => requestFavSort("currentPrice" as SortKey)} className="sortable">
                 Current Price ($)
-                {renderSortIcon("preMarketPrice", favSortKey, favAscending)}
+                {renderSortIcon("currentPrice", favSortKey, favAscending)}
               </th>
               <th onClick={() => requestFavSort("percentChange" as SortKey)} className="sortable">
                 % Change
@@ -308,7 +352,12 @@ export default function HomePage() {
                   <td><strong>{stock.ticker}</strong></td>
                   <td className="company-name">{getCompanyName(stock.ticker)}</td>
                   <td>{formatBillions(stock.marketCap)}</td>
-                  <td>{stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
+                  <td>
+                    {/* 💡 Type-safe rendering with Number conversion */}
+                    {isFinite(Number(stock.currentPrice)) 
+                      ? Number(stock.currentPrice).toFixed(2) 
+                      : '0.00'}
+                  </td>
                   <td className={stock.percentChange >= 0 ? 'positive' : 'negative'}>
                     {stock.percentChange >= 0 ? '+' : ''}{stock.percentChange?.toFixed(2) || '0.00'}%
                   </td>
@@ -360,9 +409,9 @@ export default function HomePage() {
                 Market Cap&nbsp;(B)
                 {renderSortIcon("marketCap", allSortKey, allAscending)}
               </th>
-              <th onClick={() => requestAllSort("preMarketPrice" as SortKey)} className="sortable">
+              <th onClick={() => requestAllSort("currentPrice" as SortKey)} className="sortable">
                 Current Price ($)
-                {renderSortIcon("preMarketPrice", allSortKey, allAscending)}
+                {renderSortIcon("currentPrice", allSortKey, allAscending)}
               </th>
               <th onClick={() => requestAllSort("percentChange" as SortKey)} className="sortable">
                 % Change
@@ -386,7 +435,12 @@ export default function HomePage() {
                   <td><strong>{stock.ticker}</strong></td>
                   <td className="company-name">{getCompanyName(stock.ticker)}</td>
                   <td>{formatBillions(stock.marketCap)}</td>
-                  <td>{stock.preMarketPrice?.toFixed(2) || '0.00'}</td>
+                  <td>
+                    {/* 💡 Type-safe rendering with Number conversion */}
+                    {isFinite(Number(stock.currentPrice)) 
+                      ? Number(stock.currentPrice).toFixed(2) 
+                      : '0.00'}
+                  </td>
                   <td className={stock.percentChange >= 0 ? 'positive' : 'negative'}>
                     {stock.percentChange >= 0 ? '+' : ''}{stock.percentChange?.toFixed(2) || '0.00'}%
                   </td>
