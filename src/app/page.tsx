@@ -35,6 +35,96 @@ export default function HomePage() {
   // Use cookie-based favorites (no authentication needed)
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
+  // Market session detection
+  const getCurrentMarketSession = () => {
+    const now = new Date();
+    // Get current time in Eastern Time (handles EST/EDT automatically)  
+    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+    
+    const hours = easternTime.getHours();
+    const minutes = easternTime.getMinutes();
+    const currentTimeInMinutes = hours * 60 + minutes;
+    const dayOfWeek = easternTime.getDay(); // 0 = Sunday, 6 = Saturday
+    
+    // Check if it's a US market holiday
+    const isMarketHoliday = (date: Date): boolean => {
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1; // getMonth() is 0-indexed
+      const day = date.getDate();
+      const dayOfWeek = date.getDay();
+      
+      // Fixed date holidays
+      if (month === 1 && day === 1) return true; // New Year's Day
+      if (month === 7 && day === 4) return true; // Independence Day
+      if (month === 12 && day === 25) return true; // Christmas Day
+      
+      // MLK Day - 3rd Monday in January
+      if (month === 1 && dayOfWeek === 1 && day >= 15 && day <= 21) return true;
+      
+      // Presidents' Day - 3rd Monday in February  
+      if (month === 2 && dayOfWeek === 1 && day >= 15 && day <= 21) return true;
+      
+      // Memorial Day - Last Monday in May
+      if (month === 5 && dayOfWeek === 1 && day >= 25) return true;
+      
+      // Labor Day - 1st Monday in September
+      if (month === 9 && dayOfWeek === 1 && day <= 7) return true;
+      
+      // Thanksgiving - 4th Thursday in November
+      if (month === 11 && dayOfWeek === 4 && day >= 22 && day <= 28) return true;
+      
+      return false;
+    };
+    
+    // Market sessions in minutes from 00:00 ET
+    const preMarketStart = 4 * 60; // 4:00 AM
+    const marketStart = 9 * 60 + 30; // 9:30 AM  
+    const marketEnd = 16 * 60; // 4:00 PM
+    const afterHoursEnd = 20 * 60; // 8:00 PM
+    const midDay = 12 * 60; // 12:00 PM (noon)
+    
+    // Check if market is closed (weekends or holidays)
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+    const isHoliday = isMarketHoliday(easternTime);
+    
+    if (isWeekend || isHoliday) {
+      // Market is closed, show pre-market or after-hours based on time
+      if (currentTimeInMinutes >= preMarketStart && currentTimeInMinutes < midDay) {
+        return 'pre-market'; // Morning hours - closer to market open
+      } else if (currentTimeInMinutes >= midDay && currentTimeInMinutes < afterHoursEnd) {
+        return 'after-hours'; // Afternoon/evening hours - closer to market close
+      } else {
+        return 'closed'; // Night hours
+      }
+    }
+    
+    // Regular trading day logic
+    if (currentTimeInMinutes >= preMarketStart && currentTimeInMinutes < marketStart) {
+      return 'pre-market';
+    } else if (currentTimeInMinutes >= marketStart && currentTimeInMinutes < marketEnd) {
+      return 'market-hours';
+    } else if (currentTimeInMinutes >= marketEnd && currentTimeInMinutes < afterHoursEnd) {
+      return 'after-hours';
+    } else {
+      return 'closed'; // Market is closed
+    }
+  };
+
+  const [currentSession, setCurrentSession] = useState(getCurrentMarketSession());
+
+  // Update current session every minute
+  useEffect(() => {
+    const updateSession = () => {
+      setCurrentSession(getCurrentMarketSession());
+    };
+    
+    // Update immediately and then every minute
+    updateSession();
+    const sessionInterval = setInterval(updateSession, 60000); // Every 60 seconds
+    
+    return () => clearInterval(sessionInterval);
+  }, []);
+
   // Fetch background service status
   useEffect(() => {
     const fetchBackgroundStatus = async () => {
@@ -301,17 +391,17 @@ export default function HomePage() {
                    <strong>Live prices: 4:00 AM - 8:00 PM EST</strong>
                  </div>
                  <ul className="hours-list">
-                   <li className="hours-item pre-market">
+                   <li className={`hours-item pre-market ${currentSession === 'pre-market' ? 'active' : 'inactive'}`}>
                      <span className="bullet">•</span>
                      <span className="session-name">Pre-market</span>
                      <span className="session-time">4:00 - 9:30 AM</span>
                    </li>
-                   <li className="hours-item market-hours">
+                   <li className={`hours-item market-hours ${currentSession === 'market-hours' ? 'active' : 'inactive'}`}>
                      <span className="bullet">•</span>
                      <span className="session-name">Market hours</span>
                      <span className="session-time">9:30 AM - 4:00 PM</span>
                    </li>
-                   <li className="hours-item after-hours">
+                   <li className={`hours-item after-hours ${currentSession === 'after-hours' ? 'active' : 'inactive'}`}>
                      <span className="bullet">•</span>
                      <span className="session-name">After-hours</span>
                      <span className="session-time">4:00 - 8:00 PM</span>

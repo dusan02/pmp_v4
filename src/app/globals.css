@@ -956,6 +956,31 @@ table th:nth-child(8), table td:nth-child(8) { width: 10%; text-align: center; }
 .market-hours .bullet { color: #16a34a; }
 .after-hours .bullet { color: #3b82f6; }
 
+/* Inactive state - all gray */
+.hours-item.inactive .bullet { 
+  color: #6b7280 !important; /* Gray color for inactive sessions */
+}
+.hours-item.inactive .session-name { 
+  color: #6b7280 !important; /* Gray color for inactive sessions */
+  font-weight: 400 !important; /* Normal weight for inactive */
+}
+.hours-item.inactive .session-time { 
+  color: #9ca3af !important; /* Lighter gray for time */
+}
+
+/* Active state - dark green and bold */
+.hours-item.active .bullet { 
+  color: #15803d !important; /* Dark green for active session */
+}
+.hours-item.active .session-name { 
+  color: #15803d !important; /* Dark green for active session */
+  font-weight: 700 !important; /* Bold for active session */
+}
+.hours-item.active .session-time { 
+  color: #15803d !important; /* Dark green for active time */
+  font-weight: 600 !important; /* Semi-bold for active time */
+}
+
 /* === SEO CONTENT OPTIMIZATION ========================= */
 .visually-hidden {
   position: absolute !important;
