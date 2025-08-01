@@ -1,93 +1,70 @@
 import { useState, useEffect, useCallback } from 'react';
 
 interface Favorite {
-  id: number;
-  user_id: string;
   ticker: string;
   added_at: string;
-  company_name?: string;
-  market_cap?: number;
 }
 
-export function useFavorites(userId?: string) {
-  const effectiveUserId = userId || 'default';
+export function useFavorites() {
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-    // Load favorites from database
-  const loadFavorites = useCallback(async () => {
+  // Load favorites from cookies
+  const loadFavorites = useCallback(() => {
     setLoading(true);
-    setError(null);
-
     try {
-      const response = await fetch('/api/favorites');
-      const data = await response.json();
-
-      if (data.success) {
-        setFavorites(data.data);
+      const favoritesCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('favorites='));
+      
+      if (favoritesCookie) {
+        const favoritesData = favoritesCookie.split('=')[1];
+        const favoritesList = JSON.parse(decodeURIComponent(favoritesData));
+        setFavorites(favoritesList);
       } else {
-        setError(data.error || 'Failed to load favorites');
+        setFavorites([]);
       }
     } catch (err) {
-      setError('Failed to load favorites');
-      console.error('Error loading favorites:', err);
+      console.error('Error loading favorites from cookies:', err);
+      setFavorites([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-    // Add favorite to database
-  const addFavorite = useCallback(async (ticker: string) => {
+  // Save favorites to cookies
+  const saveFavorites = useCallback((favoritesList: Favorite[]) => {
     try {
-      const response = await fetch('/api/favorites', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ticker }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Reload favorites to get updated list
-        await loadFavorites();
-        return true;
-      } else {
-        setError(data.error || 'Failed to add favorite');
-        return false;
-      }
+      const favoritesData = JSON.stringify(favoritesList);
+      // Set cookie to expire in 1 year
+      const expires = new Date();
+      expires.setFullYear(expires.getFullYear() + 1);
+      document.cookie = `favorites=${encodeURIComponent(favoritesData)}; expires=${expires.toUTCString()}; path=/`;
     } catch (err) {
-      setError('Failed to add favorite');
-      console.error('Error adding favorite:', err);
-      return false;
+      console.error('Error saving favorites to cookies:', err);
     }
-  }, [loadFavorites]);
+  }, []);
 
-    // Remove favorite from database
-  const removeFavorite = useCallback(async (ticker: string) => {
-    try {
-      const response = await fetch(`/api/favorites?ticker=${ticker}`, {
-        method: 'DELETE',
-      });
+  // Add favorite
+  const addFavorite = useCallback((ticker: string) => {
+    const newFavorite: Favorite = {
+      ticker,
+      added_at: new Date().toISOString()
+    };
+    
+    const updatedFavorites = [...favorites, newFavorite];
+    setFavorites(updatedFavorites);
+    saveFavorites(updatedFavorites);
+    return true;
+  }, [favorites, saveFavorites]);
 
-      const data = await response.json();
-
-      if (data.success) {
-        // Reload favorites to get updated list
-        await loadFavorites();
-        return true;
-      } else {
-        setError(data.error || 'Failed to remove favorite');
-        return false;
-      }
-    } catch (err) {
-      setError('Failed to remove favorite');
-      console.error('Error removing favorite:', err);
-      return false;
-    }
-  }, [loadFavorites]);
+  // Remove favorite
+  const removeFavorite = useCallback((ticker: string) => {
+    const updatedFavorites = favorites.filter(fav => fav.ticker !== ticker);
+    setFavorites(updatedFavorites);
+    saveFavorites(updatedFavorites);
+    return true;
+  }, [favorites, saveFavorites]);
 
   // Check if ticker is in favorites
   const isFavorite = useCallback((ticker: string) => {
@@ -95,11 +72,11 @@ export function useFavorites(userId?: string) {
   }, [favorites]);
 
   // Toggle favorite status
-  const toggleFavorite = useCallback(async (ticker: string) => {
+  const toggleFavorite = useCallback((ticker: string) => {
     if (isFavorite(ticker)) {
-      return await removeFavorite(ticker);
+      return removeFavorite(ticker);
     } else {
-      return await addFavorite(ticker);
+      return addFavorite(ticker);
     }
   }, [isFavorite, addFavorite, removeFavorite]);
 
@@ -111,7 +88,6 @@ export function useFavorites(userId?: string) {
   return {
     favorites,
     loading,
-    error,
     addFavorite,
     removeFavorite,
     toggleFavorite,

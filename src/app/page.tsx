@@ -1,16 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronUp, ChevronDown, Download, Table, User, LogOut, AlertTriangle } from 'lucide-react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import { useSortableData } from '@/hooks/useSortableData';
 import { formatBillions } from '@/lib/format';
-// Remove cache import - it's server-side only
 
 import CompanyLogo from '@/components/CompanyLogo';
-import MarketIndicators from '@/components/MarketIndicators';
 import { useFavorites } from '@/hooks/useFavorites';
-import { useAuth } from '@/hooks/useAuth';
-import AuthModal from '@/components/AuthModal';
 import { Activity } from 'lucide-react';
 
 interface StockData {
@@ -28,18 +24,14 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [backgroundStatus, setBackgroundStatus] = useState<{
     isRunning: boolean;
     lastUpdate: string;
     nextUpdate: string;
   } | null>(null);
   
-  // Authentication
-  const { user, loading: authLoading, logout } = useAuth();
-  
-  // Use database-backed favorites with user ID
-  const { favorites, toggleFavorite, isFavorite } = useFavorites(user?.id || 'default');
+  // Use cookie-based favorites (no authentication needed)
+  const { favorites, toggleFavorite, isFavorite } = useFavorites();
 
   // Fetch background service status
   useEffect(() => {
@@ -85,21 +77,28 @@ export default function HomePage() {
     try {
       // Use cached API endpoint
       const response = await fetch(`/api/prices/cached?refresh=${refresh}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
       const result = await response.json();
       console.log('API response:', result);
       console.log('Stock data length:', result.data?.length);
       
+      // Check if API returned an error
+      if (!response.ok || result.error) {
+        console.log('API error:', result.error || result.message);
+        setError(result.message || 'API temporarily unavailable. Please try again later.');
+        setStockData(mockStocks);
+        return;
+      }
+      
       // Check if we have valid data
       if (result.data && result.data.length > 0) {
         setStockData(result.data);
+        // Clear any previous errors if we have data
+        setError(null);
       } else {
         // No data from API, use mock data
         console.log('No data from API, using mock data');
         setStockData(mockStocks);
-        setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key in .env.local file.');
+        setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key. See ENV_SETUP.md for instructions.');
       }
       
       // Log cache status
@@ -108,7 +107,7 @@ export default function HomePage() {
       }
     } catch (err) {
       console.log('API error, using mock data:', err);
-      setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key in .env.local file.');
+      setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key. See ENV_SETUP.md for instructions.');
       // Fallback to mock data
       setStockData(mockStocks);
     } finally {
@@ -205,28 +204,7 @@ export default function HomePage() {
     return null;
   };
 
-  const exportToCSV = () => {
-    const headers = ['Ticker', 'Company', 'Market Cap (B)', 'Current Price ($)', '% Change', 'Market Cap Diff (B $)'];
-    const csvContent = [
-      headers.join(','),
-      ...allStocksSorted.map(stock => [
-        stock.ticker,
-        getCompanyName(stock.ticker),
-        stock.marketCap,
-        stock.preMarketPrice?.toFixed(2) || '0.00',
-        stock.percentChange?.toFixed(2) || '0.00',
-        stock.marketCapDiff?.toFixed(2) || '0.00'
-      ].join(','))
-    ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `premarket-stocks-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="container">
@@ -246,49 +224,17 @@ export default function HomePage() {
               <p>Track real-time pre-market movements of the top 300 largest companies traded globally. Monitor percentage changes, market cap fluctuations, and build your personalized watchlist.</p>
             </div>
           </div>
-          <div className="actions-section">
-            {/* Auth Section */}
-            <div className="header-actions">
-              {user ? (
-                <div className="user-info">
-                  <div className="user-details">
-                    <p className="user-name">{user.name || user.email}</p>
-                    <p className="user-status">Signed in</p>
-                  </div>
-                  <button onClick={logout} className="header-btn">
-                    <LogOut size={16} />
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <button onClick={() => setShowAuthModal(true)} className="header-btn">
-                  <User size={16} />
-                  Sign In
-                </button>
-              )}
-              {/* Action Buttons */}
-              <button onClick={() => fetchStockData(false)} disabled={loading} className="header-btn">
-                {loading ? 'Refreshing...' : 'Refresh Data'}
-              </button>
-              <button onClick={exportToCSV} className="header-btn export-btn">
-                <Table size={16} />
-                Export CSV
-              </button>
-              <a href="/errors" className="header-btn errors-link">
-                <AlertTriangle size={16} />
-                Errors
-              </a>
-            </div>
-            {/* Background Status */}
-            {backgroundStatus && (
-              <div className="background-status">
-                <Activity size={14} className={backgroundStatus.isRunning ? 'text-green-600' : 'text-red-600'} />
-                <span className="text-xs text-gray-600">
-                  {backgroundStatus.isRunning ? 'Auto-updating' : 'Manual mode'}
-                </span>
-              </div>
-            )}
-          </div>
+                     <div className="actions-section">
+             {/* Background Status */}
+             {backgroundStatus && (
+               <div className="background-status">
+                 <Activity size={14} className={backgroundStatus.isRunning ? 'text-green-600' : 'text-red-600'} />
+                 <span className="text-xs text-gray-600">
+                   {backgroundStatus.isRunning ? 'Auto-updating' : 'Manual mode'}
+                 </span>
+               </div>
+             )}
+           </div>
         </div>
       </div>
 
@@ -454,18 +400,7 @@ export default function HomePage() {
             Visit Kiddobank.com
           </a>
         </p>
-      </div>
-      
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={(user) => {
-          setShowAuthModal(false);
-          // Refresh favorites after login
-          window.location.reload();
-        }}
-      />
-    </div>
-  );
-} 
+             </div>
+     </div>
+   );
+ } 

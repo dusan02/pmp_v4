@@ -2,7 +2,6 @@ import { getCachedData, setCachedData, getCacheStatus, setCacheStatus, CACHE_KEY
 import { dbHelpers, runTransaction, initializeDatabase } from './database';
 import { createBackgroundService } from './backgroundService';
 import { recordCacheHit, recordCacheMiss, recordStockUpdate, recordApiCall } from './prometheus';
-import { trackError } from './errorTracking';
 
 interface CachedStockData {
   ticker: string;
@@ -183,7 +182,10 @@ class StockDataCache {
     initializeDatabase();
     
     // Initialize background service
-    createBackgroundService(this);
+    const backgroundService = createBackgroundService(this);
+    
+    // Start background service
+    backgroundService.start().catch(console.error);
     
     this.startBackgroundUpdates();
   }
@@ -203,10 +205,11 @@ class StockDataCache {
        console.log('API Key length:', apiKey?.length);
        console.log('API Key (first 10 chars):', apiKey?.substring(0, 10) + '...');
        
-       if (!apiKey) {
-         console.error('POLYGON_API_KEY not found in environment variables');
-         return;
-       }
+               if (!apiKey) {
+          console.error('POLYGON_API_KEY not found in environment variables');
+          console.error('Please check your .env.local file contains: POLYGON_API_KEY=your_actual_api_key_here');
+          return;
+        }
              const batchSize = 20; // Process in batches to avoid rate limits
        const results: CachedStockData[] = [];
 
@@ -223,16 +226,11 @@ class StockDataCache {
             url: testUrl,
           });
           
-          trackError({
-            error: new Error(`Polygon API test failed: ${testResponse.status} ${testResponse.statusText}`),
-            metadata: {
-              status: testResponse.status,
-              statusText: testResponse.statusText,
-              body: testErrorBody,
-              url: testUrl,
-            },
-            tags: ['api-test', 'polygon'],
-            severity: 'high',
+          console.error('Polygon API test failed:', {
+            status: testResponse.status,
+            statusText: testResponse.statusText,
+            body: testErrorBody,
+            url: testUrl,
           });
           
           recordApiCall('polygon', 'snapshot', 'error');
@@ -371,24 +369,14 @@ class StockDataCache {
               });
             } catch (dbError) {
               console.error(`Database error for ${ticker}:`, dbError);
-              trackError({
-                error: dbError instanceof Error ? dbError : new Error(String(dbError)),
-                metadata: { ticker, operation: 'database-update' },
-                tags: ['database', 'cache-update'],
-                severity: 'medium',
-              });
+              console.error('Database error for', ticker, ':', dbError);
             }
 
             return stockData;
 
           } catch (error) {
             console.error(`Error processing ${ticker}:`, error);
-            trackError({
-              error: error instanceof Error ? error : new Error(String(error)),
-              metadata: { ticker, operation: 'stock-processing' },
-              tags: ['stock-processing', 'cache-update'],
-              severity: 'medium',
-            });
+            console.error('Error processing stock', ticker, ':', error);
             return null;
           }
         });
@@ -419,24 +407,14 @@ class StockDataCache {
         console.log(`✅ Redis cache updated with ${results.length} stocks at ${new Date().toISOString()}`);
       } catch (error) {
         console.error('Failed to update Redis cache:', error);
-        trackError({
-          error: error instanceof Error ? error : new Error(String(error)),
-          metadata: { operation: 'redis-cache-update' },
-          tags: ['redis', 'cache-update'],
-          severity: 'high',
-        });
+        console.error('Failed to update Redis cache:', error);
       }
 
       console.log(`Cache updated with ${results.length} stocks at ${new Date().toISOString()}`);
 
     } catch (error) {
       console.error('Cache update failed:', error);
-      trackError({
-        error: error instanceof Error ? error : new Error(String(error)),
-        metadata: { operation: 'cache-update' },
-        tags: ['cache-update'],
-        severity: 'high',
-      });
+      console.error('Cache update failed:', error);
     } finally {
       this.isUpdating = false;
     }
@@ -473,12 +451,7 @@ class StockDataCache {
       return Array.from(this.cache.values()).sort((a, b) => b.marketCap - a.marketCap);
     } catch (error) {
       console.error('Error getting cached data:', error);
-      trackError({
-        error: error instanceof Error ? error : new Error(String(error)),
-        metadata: { operation: 'get-cached-data' },
-        tags: ['redis', 'cache-read'],
-        severity: 'medium',
-      });
+      console.error('Error getting cached data:', error);
       recordCacheMiss('redis');
       return Array.from(this.cache.values()).sort((a, b) => b.marketCap - a.marketCap);
     }
@@ -511,12 +484,7 @@ class StockDataCache {
       };
     } catch (error) {
       console.error('Error getting cache status:', error);
-      trackError({
-        error: error instanceof Error ? error : new Error(String(error)),
-        metadata: { operation: 'get-cache-status' },
-        tags: ['redis', 'cache-status'],
-        severity: 'low',
-      });
+      console.error('Error getting cache status:', error);
       return {
         count: 0,
         lastUpdated: null,

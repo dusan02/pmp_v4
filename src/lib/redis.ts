@@ -1,35 +1,48 @@
 import { createClient } from 'redis';
 
-// Redis client configuration
-const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
-  socket: {
-    reconnectStrategy: (retries) => {
-      if (retries > 10) {
-        console.error('Redis connection failed after 10 retries');
-        return false;
+// Redis client configuration with fallback to in-memory cache
+let redisClient: any = null;
+let inMemoryCache = new Map();
+let cacheTimestamps = new Map();
+
+// Try to initialize Redis client
+try {
+  redisClient = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    socket: {
+      reconnectStrategy: (retries) => {
+        if (retries > 10) {
+          console.error('Redis connection failed after 10 retries');
+          return false;
+        }
+        return Math.min(retries * 100, 3000);
       }
-      return Math.min(retries * 100, 3000);
     }
+  });
+
+  // Connect to Redis
+  redisClient.on('error', (err) => {
+    console.error('Redis Client Error:', err);
+  });
+
+  redisClient.on('connect', () => {
+    console.log('✅ Redis connected successfully');
+  });
+
+  redisClient.on('ready', () => {
+    console.log('✅ Redis ready for operations');
+  });
+
+  // Initialize connection
+  if (!redisClient.isOpen) {
+    redisClient.connect().catch((err: any) => {
+      console.log('⚠️ Redis not available, using in-memory cache');
+      redisClient = null;
+    });
   }
-});
-
-// Connect to Redis
-redisClient.on('error', (err) => {
-  console.error('Redis Client Error:', err);
-});
-
-redisClient.on('connect', () => {
-  console.log('✅ Redis connected successfully');
-});
-
-redisClient.on('ready', () => {
-  console.log('✅ Redis ready for operations');
-});
-
-// Initialize connection
-if (!redisClient.isOpen) {
-  redisClient.connect().catch(console.error);
+} catch (error) {
+  console.log('⚠️ Redis not available, using in-memory cache');
+  redisClient = null;
 }
 
 // Cache keys
@@ -43,68 +56,86 @@ export const CACHE_KEYS = {
 // Cache TTL (Time To Live) - 5 minutes
 export const CACHE_TTL = 300; // seconds
 
-// Helper functions
+// Helper functions with fallback to in-memory cache
 export async function getCachedData(key: string) {
   try {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
+    if (redisClient && redisClient.isOpen) {
+      const data = await redisClient.get(key);
+      return data ? JSON.parse(data.toString()) : null;
+    } else {
+      // Use in-memory cache as fallback
+      const data = inMemoryCache.get(key);
+      const timestamp = cacheTimestamps.get(key);
+      if (data && timestamp && Date.now() - timestamp < CACHE_TTL * 1000) {
+        return data;
+      }
+      return null;
     }
-    const data = await redisClient.get(key);
-    return data ? JSON.parse(data.toString()) : null;
   } catch (error) {
-    console.error('Redis get error:', error);
+    console.error('Cache get error:', error);
     return null;
   }
 }
 
 export async function setCachedData(key: string, data: any, ttl: number = CACHE_TTL) {
   try {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.setEx(key, ttl, JSON.stringify(data));
+    } else {
+      // Use in-memory cache as fallback
+      inMemoryCache.set(key, data);
+      cacheTimestamps.set(key, Date.now());
     }
-    await redisClient.setEx(key, ttl, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('Redis set error:', error);
+    console.error('Cache set error:', error);
     return false;
   }
 }
 
 export async function deleteCachedData(key: string) {
   try {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.del(key);
+    } else {
+      // Use in-memory cache as fallback
+      inMemoryCache.delete(key);
+      cacheTimestamps.delete(key);
     }
-    await redisClient.del(key);
     return true;
   } catch (error) {
-    console.error('Redis delete error:', error);
+    console.error('Cache delete error:', error);
     return false;
   }
 }
 
 export async function getCacheStatus() {
   try {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
+    if (redisClient && redisClient.isOpen) {
+      const status = await redisClient.get(CACHE_KEYS.CACHE_STATUS);
+      return status ? JSON.parse(status.toString()) : null;
+    } else {
+      // Use in-memory cache as fallback
+      return inMemoryCache.get(CACHE_KEYS.CACHE_STATUS) || null;
     }
-    const status = await redisClient.get(CACHE_KEYS.CACHE_STATUS);
-    return status ? JSON.parse(status.toString()) : null;
   } catch (error) {
-    console.error('Redis status error:', error);
+    console.error('Cache status error:', error);
     return null;
   }
 }
 
 export async function setCacheStatus(status: any) {
   try {
-    if (!redisClient.isOpen) {
-      await redisClient.connect();
+    if (redisClient && redisClient.isOpen) {
+      await redisClient.setEx(CACHE_KEYS.CACHE_STATUS, CACHE_TTL, JSON.stringify(status));
+    } else {
+      // Use in-memory cache as fallback
+      inMemoryCache.set(CACHE_KEYS.CACHE_STATUS, status);
+      cacheTimestamps.set(CACHE_KEYS.CACHE_STATUS, Date.now());
     }
-    await redisClient.setEx(CACHE_KEYS.CACHE_STATUS, CACHE_TTL, JSON.stringify(status));
     return true;
   } catch (error) {
-    console.error('Redis status set error:', error);
+    console.error('Cache status set error:', error);
     return false;
   }
 }

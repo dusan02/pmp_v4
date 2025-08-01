@@ -1,5 +1,5 @@
 import { stockDataCache } from './cache';
-import redisClient from './redis';
+import { setCacheStatus, getCacheStatus } from './redis';
 import { dbHelpers } from './database';
 import { 
   updateBackgroundServiceStatus, 
@@ -137,7 +137,7 @@ class BackgroundDataService {
   }
 
   /**
-   * Store update status in Redis
+   * Store update status in cache
    */
   private async storeUpdateStatus(status: {
     lastUpdate: string;
@@ -148,7 +148,7 @@ class BackgroundDataService {
     nextUpdate: string;
   }): Promise<void> {
     try {
-      await redisClient.set('background_service_status', JSON.stringify(status));
+      await setCacheStatus(status);
     } catch (error) {
       console.error('Failed to store background service status:', error);
     }
@@ -166,8 +166,8 @@ class BackgroundDataService {
     lastError?: string;
   } | null> {
     try {
-      const status = await redisClient.get('background_service_status');
-      return status ? JSON.parse(status.toString()) : null;
+      const status = await getCacheStatus();
+      return status;
     } catch (error) {
       console.error('Failed to get background service status:', error);
       return null;

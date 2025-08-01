@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { initializePreloading } from '@/lib/preload'
 import { initializePWA } from '@/lib/sw-register'
-import PerformanceOptimizer from '@/components/PerformanceOptimizer'
 
 export const metadata: Metadata = {
   title: 'PreMarketPrice.com - Real-Time Pre-Market Stock Tracking | Top 200 US Companies',
@@ -73,9 +72,9 @@ export default function RootLayout({
     <html lang="en">
       <head>
         {/* Preload critical resources */}
-        <link rel="preload" href="/favicon.ico" as="image" />
-        <link rel="preload" href="/og-image.png" as="image" />
-        <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" />
+        <link rel="preload" href="/favicon.ico" as="image" type="image/x-icon" />
+        <link rel="preload" href="/og-image.png" as="image" type="image/png" />
+        <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" crossOrigin="anonymous" />
         
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://logo.clearbit.com" />
@@ -118,9 +117,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <PerformanceOptimizer>
-          {children}
-        </PerformanceOptimizer>
+        {children}
       </body>
     </html>
   )

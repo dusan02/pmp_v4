@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#1f2937"/>
+  <rect x="50" y="50" width="1100" height="530" fill="#3b82f6" rx="20"/>
+  <text x="600" y="200" font-family="Arial, sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="white">PreMarketPrice.com</text>
+  <text x="600" y="280" font-family="Arial, sans-serif" font-size="40" text-anchor="middle" fill="white">Real-Time Stock Tracking</text>
+  <text x="600" y="350" font-family="Arial, sans-serif" font-size="32" text-anchor="middle" fill="white">Track pre-market movements of top 300 companies</text>
+  <text x="600" y="420" font-family="Arial, sans-serif" font-size="28" text-anchor="middle" fill="white">Live prices from 4:00 AM to 8:00 PM EST</text>
+  <text x="600" y="500" font-family="Arial, sans-serif" font-size="24" text-anchor="middle" fill="white">Powered by Next.js & Polygon.io</text>
+</svg> 
