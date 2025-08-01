@@ -1,41 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Image optimization
+  // Image optimization for local logos
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'ui-avatars.com',
-        port: '',
-        pathname: '/api/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'logo.clearbit.com',
-        port: '',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'www.google.com',
-        port: '',
-        pathname: '/s2/favicons/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'icons.duckduckgo.com',
-        port: '',
-        pathname: '/ip3/**',
-      },
-    ],
-    dangerouslyAllowSVG: true,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // No remote patterns needed - all logos are local now
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+    minimumCacheTTL: 60 * 60 * 24 * 365, // 1 year for local assets
+    unoptimized: false,
   },
 
   // Experimental features for better performance

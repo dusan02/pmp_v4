@@ -204,7 +204,7 @@ class BackgroundDataService {
 
 // Default configuration
 const DEFAULT_CONFIG: BackgroundServiceConfig = {
-  updateInterval: 5 * 60 * 1000, // 5 minutes
+  updateInterval: 2 * 60 * 1000, // 2 minutes
   batchSize: 50,
   maxRetries: 3,
   retryDelay: 30 * 1000 // 30 seconds

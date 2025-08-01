@@ -146,8 +146,8 @@ export default function HomePage() {
         console.log('API message:', result.message);
         
         // If cache is updating, show loading message instead of error
-        if (result.message && result.message.includes('cache')) {
-          setError('Loading data... Please wait.');
+        if (result.message && (result.message.includes('cache') || result.message.includes('Cache'))) {
+          setError('Auto-updating every 2 minutes - Loading fresh data... Please wait.');
           // Keep existing data if we have it, otherwise use mock
           if (stockData.length === 0) {
             setStockData(mockStocks);
@@ -325,7 +325,7 @@ export default function HomePage() {
                <div className="background-status">
                  <Activity size={14} className={backgroundStatus.isRunning ? 'text-green-600' : 'text-red-600'} />
                  <span className="text-xs text-gray-600">
-                   {backgroundStatus.isRunning ? 'Auto-updating every 5 minutes' : 'Manual mode'}
+                   {backgroundStatus.isRunning ? 'Auto-updating every 2 minutes' : 'Manual mode'}
                  </span>
                </div>
              )}
