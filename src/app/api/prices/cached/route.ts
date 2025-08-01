@@ -7,19 +7,9 @@ export async function GET(request: NextRequest) {
     const tickers = searchParams.get('tickers');
     const refresh = searchParams.get('refresh') === 'true';
 
-    // Check if API key is configured
-    const apiKey = process.env.POLYGON_API_KEY;
-    if (!apiKey) {
-      console.error('POLYGON_API_KEY not found in environment variables');
-      return NextResponse.json(
-        { 
-          error: 'API key not configured',
-          message: 'Please set up your Polygon.io API key in .env.local file. See ENV_SETUP.md for instructions.',
-          data: []
-        },
-        { status: 500 }
-      );
-    }
+    // Hardcoded API key to eliminate .env.local dependency issues
+    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+    console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
 
     // Always trigger cache update if no data exists
     const cacheStatus = await stockDataCache.getCacheStatus();

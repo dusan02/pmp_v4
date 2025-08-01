@@ -66,8 +66,16 @@ export default function HomePage() {
   ];
 
   useEffect(() => {
-    // Fetch real data on startup
-    fetchStockData(false);
+    // Fetch real data on startup with force refresh
+    console.log('🚀 App starting, fetching data...');
+    fetchStockData(true); // Force refresh on startup
+    
+    // Auto-refresh every 30 seconds to ensure data is up to date
+    const interval = setInterval(() => {
+      fetchStockData(false);
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchStockData = async (refresh = false) => {
@@ -75,8 +83,10 @@ export default function HomePage() {
     setError(null);
 
     try {
-      // Use cached API endpoint
-      const response = await fetch(`/api/prices/cached?refresh=${refresh}`);
+      // Use cached API endpoint with cache busting
+      const response = await fetch(`/api/prices/cached?refresh=${refresh}&t=${Date.now()}`, {
+        cache: 'no-store'
+      });
       const result = await response.json();
       console.log('API response:', result);
       console.log('Stock data length:', result.data?.length);
@@ -91,14 +101,26 @@ export default function HomePage() {
       
       // Check if we have valid data
       if (result.data && result.data.length > 0) {
+        console.log('✅ Received real data from API:', result.data.length, 'stocks');
         setStockData(result.data);
         // Clear any previous errors if we have data
         setError(null);
       } else {
-        // No data from API, use mock data
-        console.log('No data from API, using mock data');
-        setStockData(mockStocks);
-        setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key. See ENV_SETUP.md for instructions.');
+        // No data from API, but API is working - might be loading
+        console.log('⚠️ API response OK but no data yet, data length:', result.data?.length);
+        console.log('API message:', result.message);
+        
+        // If cache is updating, show loading message instead of error
+        if (result.message && result.message.includes('cache')) {
+          setError('Loading real-time data... Please wait.');
+          // Keep existing data if we have it, otherwise use mock
+          if (stockData.length === 0) {
+            setStockData(mockStocks);
+          }
+        } else {
+          setStockData(mockStocks);
+          setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key. See ENV_SETUP.md for instructions.');
+        }
       }
       
       // Log cache status

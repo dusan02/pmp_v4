@@ -200,16 +200,9 @@ class StockDataCache {
     console.log('Starting cache update...');
 
     try {
-             const apiKey = process.env.POLYGON_API_KEY;
-       console.log('API Key found:', apiKey ? 'Yes' : 'No');
-       console.log('API Key length:', apiKey?.length);
-       console.log('API Key (first 10 chars):', apiKey?.substring(0, 10) + '...');
-       
-               if (!apiKey) {
-          console.error('POLYGON_API_KEY not found in environment variables');
-          console.error('Please check your .env.local file contains: POLYGON_API_KEY=your_actual_api_key_here');
-          return;
-        }
+                   // Hardcoded API key to eliminate .env.local dependency issues
+      const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+      console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
              const batchSize = 20; // Process in batches to avoid rate limits
        const results: CachedStockData[] = [];
 
