@@ -721,10 +721,10 @@ class StockDataCache {
       
       demoStocks.push({
         ticker,
-        currentPrice: price,
-        closePrice: closePrice,
-        percentChange: change,
-        marketCapDiff: (price - closePrice) * (this.shareCounts[ticker] || 1000000000),
+        currentPrice: Math.round(price * 100) / 100, // Round to 2 decimal places
+        closePrice: Math.round(closePrice * 100) / 100, // Round to 2 decimal places
+        percentChange: Math.round(change * 100) / 100, // Round to 2 decimal places
+        marketCapDiff: Math.round((price - closePrice) * (this.shareCounts[ticker] || 1000000000) / 1000000000 * 100) / 100, // Round to 2 decimal places
         marketCap: marketCap,
         lastUpdated: new Date()
       });
