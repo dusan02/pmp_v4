@@ -207,6 +207,9 @@ class StockDataCache {
     // Start background service
     backgroundService.start().catch(console.error);
     
+    // Initialize with demo data immediately
+    this.initializeWithDemoData();
+    
     this.startBackgroundUpdates();
   }
 
@@ -670,6 +673,18 @@ class StockDataCache {
 
   getCompanyName(ticker: string): string {
     return this.companyNames[ticker] || ticker;
+  }
+
+  private initializeWithDemoData(): void {
+    console.log('🔄 Initializing cache with demo data...');
+    const demoStocks = this.getDemoData();
+    
+    // Add demo data to in-memory cache
+    demoStocks.forEach(stock => {
+      this.cache.set(stock.ticker, stock);
+    });
+    
+    console.log(`✅ Cache initialized with ${demoStocks.length} demo stocks`);
   }
 
   private getDemoData(): CachedStockData[] {
