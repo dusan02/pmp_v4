@@ -397,11 +397,7 @@ class StockDataCache {
             let dataSource = '';
             
             // Priority order for current price (PRECISION IMPROVEMENT)
-            if (consolidatedLastPrice && consolidatedLastPrice > 0) {
-              // 1. HIGHEST PRIORITY: Consolidated Last Trade (most accurate)
-              currentPrice = consolidatedLastPrice;
-              dataSource = consolidatedDataSource;
-            } else if (snapshotData.ticker?.lastTrade?.p && snapshotData.ticker.lastTrade.p > 0) {
+            if (snapshotData.ticker?.lastTrade?.p && snapshotData.ticker.lastTrade.p > 0) {
               // 2. Snapshot last trade (fallback)
               currentPrice = snapshotData.ticker.lastTrade.p;
               dataSource = 'snapshotLastTrade';
