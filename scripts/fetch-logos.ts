@@ -3,7 +3,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import * as simpleIcons from 'simple-icons';
+import * as si from 'simple-icons';
 
 // Import our existing ticker mappings
 const TICKER_DOMAINS: Record<string, string> = {
@@ -405,7 +405,7 @@ async function fetchLogo(ticker: string, domain: string): Promise<LogoFetchResul
   // Try Simple Icons SVG
   try {
     const slug = domain.split('.')[0].toLowerCase();
-    const icon = simpleIcons.icons.find(i => 
+    const icon = Object.values(si).find((i: any) => 
       i.slug === slug || 
       i.slug === ticker.toLowerCase() ||
       i.title.toLowerCase().includes(slug)
