@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stockDataCache } from '@/lib/cache';
 
 export async function GET(request: NextRequest) {
+  console.log('🚀 /api/prices/cached route called at:', new Date().toISOString());
+  
   try {
     const { searchParams } = new URL(request.url);
     const tickers = searchParams.get('tickers');
     const refresh = searchParams.get('refresh') === 'true';
+
+    console.log('🔍 Request params:', { tickers, refresh });
 
     // Hardcoded API key for reliability (avoids .env.local issues)
     const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
