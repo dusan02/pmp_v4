@@ -101,7 +101,9 @@ const inMemoryStorage = {
   stocks: new Map(),
   priceHistory: new Map(),
   userFavorites: new Map(),
-  cacheStatus: new Map()
+  cacheStatus: new Map(),
+  users: new Map(),
+  sessions: new Map()
 };
 
 // Database helper functions
