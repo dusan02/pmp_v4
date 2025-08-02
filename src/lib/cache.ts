@@ -283,9 +283,47 @@ class StockDataCache {
         
         const batchPromises = batch.map(async (ticker) => {
           try {
-                         // Get ticker details for market cap
-             const detailsUrl = `https://api.polygon.io/v3/reference/tickers/${ticker}?apikey=${apiKey}`;
-             const detailsResponse = await fetch(detailsUrl);
+            // Helper function for retry logic
+            const fetchWithRetry = async (url: string, options: any = {}) => {
+              const maxRetries = 3;
+              let lastError: any;
+              
+              for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                  console.log(`🔍 Fetching ${ticker} (attempt ${attempt}/${maxRetries})`);
+                  
+                  const response = await fetch(url, {
+                    ...options,
+                    signal: AbortSignal.timeout(10000) // 10 second timeout
+                  });
+                  
+                  if (response.ok) {
+                    return response;
+                  }
+                  
+                  // If not OK, throw error to trigger retry
+                  const errorBody = await response.text();
+                  throw new Error(`HTTP ${response.status}: ${errorBody}`);
+                  
+                } catch (error) {
+                  lastError = error;
+                  console.warn(`⚠️ Attempt ${attempt} failed for ${ticker}:`, error);
+                  
+                  if (attempt < maxRetries) {
+                    // Wait before retry (exponential backoff)
+                    const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+                    console.log(`⏳ Waiting ${delay}ms before retry...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                  }
+                }
+              }
+              
+              throw lastError;
+            };
+            
+            // Get ticker details for market cap
+            const detailsUrl = `https://api.polygon.io/v3/reference/tickers/${ticker}?apikey=${apiKey}`;
+            const detailsResponse = await fetchWithRetry(detailsUrl);
              
              let marketCap = 0;
              let shares = 0;
@@ -325,7 +363,7 @@ class StockDataCache {
             // 1. Primary: Use daily aggregates /prev (most reliable)
             try {
               const prevUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`;
-              const prevResponse = await fetch(prevUrl);
+              const prevResponse = await fetchWithRetry(prevUrl);
               
               if (prevResponse.ok) {
                 const prevData = await prevResponse.json();
@@ -352,7 +390,7 @@ class StockDataCache {
             
             try {
               const lastTradeUrl = `https://api.polygon.io/v2/last/trade/${ticker}?apikey=${apiKey}`;
-              const lastTradeResponse = await fetch(lastTradeUrl);
+              const lastTradeResponse = await fetchWithRetry(lastTradeUrl);
               
               if (lastTradeResponse.ok) {
                 const lastTradeData = await lastTradeResponse.json();
@@ -375,7 +413,7 @@ class StockDataCache {
 
             // Get current price using modern snapshot API (includes pre-market, after-hours)
             const snapshotUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apikey=${apiKey}`;
-            const snapshotResponse = await fetch(snapshotUrl);
+            const snapshotResponse = await fetchWithRetry(snapshotUrl);
 
             if (!snapshotResponse.ok) {
               const errorBody = await snapshotResponse.text();
