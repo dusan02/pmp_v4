@@ -349,8 +349,8 @@ class StockDataCache {
             // Edge case protection
             
             // 1. Check for negative prices (penny stock glitches)
-            if (referencePrice < 0.01) {
-              console.warn(`⚠️ Suspiciously low reference price for ${ticker}: $${referencePrice}, skipping`);
+            if (prevClose < 0.01) {
+              console.warn(`⚠️ Suspiciously low previous close for ${ticker}: $${prevClose}, skipping`);
               return null;
             }
             
@@ -363,7 +363,8 @@ class StockDataCache {
               }
             }
             
-            const percentChange = ((currentPrice - referencePrice) / referencePrice) * 100;
+            // Calculate percent change using Decimal.js for precision
+            const percentChange = computePercentChange(currentPrice, prevClose);
             
             // 3. Check for extreme percentage changes (possible stock splits)
             if (Math.abs(percentChange) > 40) {
@@ -371,14 +372,11 @@ class StockDataCache {
               // Continue processing but log warning
             }
             
-            console.log(`📊 ${sessionLabel} session for ${ticker}: $${currentPrice} (${dataSource}) vs ref $${referencePrice} (${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%)`);
+            console.log(`📊 ${sessionLabel} session for ${ticker}: $${currentPrice} vs ref $${prevClose} (${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%)`);
             
             // Get market status for reference
             const marketStatus = await getMarketStatus();
             console.log(`📈 Market status: ${marketStatus.market} (${marketStatus.serverTime})`);
-            
-            // Calculate percent change using Decimal.js for precision
-            const percentChange = computePercentChange(currentPrice, prevClose);
             
             // Calculate market cap and diff using centralized utilities with Decimal.js precision
             const finalMarketCap = computeMarketCap(currentPrice, shares);
