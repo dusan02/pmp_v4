@@ -406,10 +406,12 @@ async function fetchLogo(ticker: string, domain: string): Promise<LogoFetchResul
   try {
     const slug = domain.split('.')[0].toLowerCase();
     const icon = Object.values(si).find((i: any) => 
-      i.slug === slug || 
-      i.slug === ticker.toLowerCase() ||
-      i.title.toLowerCase().includes(slug)
-    );
+      i && typeof i === 'object' && 'slug' in i && (
+        i.slug === slug || 
+        i.slug === ticker.toLowerCase() ||
+        i.title.toLowerCase().includes(slug)
+      )
+    ) as any;
     
     if (icon) {
       // Convert SVG to PNG using Sharp
