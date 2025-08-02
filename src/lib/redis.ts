@@ -11,6 +11,13 @@ try {
   const redisUrl = process.env.UPSTASH_REDIS_REST_URL 
     ? `redis://default:${process.env.UPSTASH_REDIS_REST_TOKEN}@${process.env.UPSTASH_REDIS_REST_URL.replace('https://', '')}:6379`
     : process.env.REDIS_URL || 'redis://localhost:6379';
+  
+  console.log('🔍 Redis URL:', process.env.UPSTASH_REDIS_REST_URL ? 'Using Upstash Redis' : 'Using local Redis');
+  console.log('🔍 Environment check:', {
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL ? 'SET' : 'NOT SET',
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN ? 'SET' : 'NOT SET',
+    REDIS_URL: process.env.REDIS_URL ? 'SET' : 'NOT SET'
+  });
     
   redisClient = createClient({
     url: redisUrl,
