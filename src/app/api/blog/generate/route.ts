@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
     info: 'Blog generation API',
     endpoints: {
       POST: '/api/blog/generate - Manually trigger blog generation',
-      GET: '/api/blog/daily-report - View latest daily report',
-      GET: '/api/blog/daily-report?format=json - Get report data as JSON'
+      'GET /api/blog/daily-report': 'View latest daily report',
+      'GET /api/blog/daily-report?format=json': 'Get report data as JSON'
     },
     authentication: 'Required: x-api-key header',
     note: 'Use POST to manually trigger blog generation'
