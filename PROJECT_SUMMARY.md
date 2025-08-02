@@ -18,7 +18,7 @@
 
 - **Pridané do README.md**: Kompletná dokumentácia v slovenčine a angličtine
 - **Pridané do UI**: Informačná sekcia s časovými radami
-- **Obsah**: Pre-market (4:00-9:30 AM), Market hours (9:30 AM-4:00 PM), After-hours (4:00-8:00 PM)
+- **Obsah**: Pre-market (4:00-9:30 AM), Market hours (9:30 AM-4:00 PM), After-hours (4:00 PM-4:00 AM)
 
 ## 🛠️ **Technické zmeny:**
 

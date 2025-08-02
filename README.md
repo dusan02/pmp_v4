@@ -28,7 +28,7 @@ Aplikácia poskytuje live dáta v reálnom čase s nasledujúcimi časovými okn
 - Kontinuálne aktualizácie
 - Real-time percentuálne zmeny
 
-### 🌙 **After-hours trading** (4:00-8:00 PM EST)
+### 🌙 **After-hours trading** (4:00 PM-4:00 AM EST)
 
 - After-hours ceny po zatvorení trhu
 - Pokračujúce aktualizácie
@@ -36,7 +36,7 @@ Aplikácia poskytuje live dáta v reálnom čase s nasledujúcimi časovými okn
 
 ### ⏰ **Dostupnosť aktuálnych cien**
 
-**Live ceny sú dostupné od 4:00 AM do 8:00 PM EST denne**, pokrývajúc kompletnú obchodnú reláciu vrátane pre-market a after-hours období.
+**Live ceny sú dostupné od 4:00 AM do 4:00 AM EST denne**, pokrývajúc kompletnú obchodnú reláciu vrátane pre-market a after-hours období.
 
 ### 🔄 **Aktualizačný systém**
 
@@ -62,7 +62,7 @@ The application provides live data in real-time with the following trading windo
 - Continuous updates
 - Real-time percentage changes
 
-### 🌙 **After-hours Trading** (4:00-8:00 PM EST)
+### 🌙 **After-hours Trading** (4:00 PM-4:00 AM EST)
 
 - After-hours prices after market close
 - Continuing updates
@@ -70,7 +70,7 @@ The application provides live data in real-time with the following trading windo
 
 ### ⏰ **Current Price Availability**
 
-**Live prices are available from 4:00 AM to 8:00 PM EST daily**, covering the complete trading session including pre-market and after-hours periods.
+**Live prices are available from 4:00 AM to 4:00 AM EST daily**, covering the complete trading session including pre-market and after-hours periods.
 
 ### 🔄 **Update System**
 
