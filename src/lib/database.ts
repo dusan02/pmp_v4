@@ -187,6 +187,56 @@ export const dbHelpers = {
     }
   },
 
+  // Analytics functions
+  getTopGainers: db ? db.prepare(`
+    SELECT ticker, company_name, market_cap, 
+           (SELECT price FROM price_history WHERE ticker = stocks.ticker ORDER BY timestamp DESC LIMIT 1) as current_price,
+           (SELECT price FROM price_history WHERE ticker = stocks.ticker ORDER BY timestamp DESC LIMIT 1 OFFSET 1) as previous_price
+    FROM stocks 
+    WHERE EXISTS (SELECT 1 FROM price_history WHERE ticker = stocks.ticker)
+    ORDER BY ((current_price - previous_price) / previous_price * 100) DESC
+    LIMIT 10
+  `) : {
+    all: () => {
+      // Mock data for in-memory storage
+      return [
+        { ticker: 'AAPL', company_name: 'Apple Inc.', market_cap: 3000000000000, current_price: 150.0, previous_price: 145.0 },
+        { ticker: 'MSFT', company_name: 'Microsoft Corp.', market_cap: 2800000000000, current_price: 320.0, previous_price: 315.0 },
+        { ticker: 'GOOGL', company_name: 'Alphabet Inc.', market_cap: 1800000000000, current_price: 140.0, previous_price: 138.0 }
+      ];
+    }
+  },
+
+  getTopLosers: db ? db.prepare(`
+    SELECT ticker, company_name, market_cap,
+           (SELECT price FROM price_history WHERE ticker = stocks.ticker ORDER BY timestamp DESC LIMIT 1) as current_price,
+           (SELECT price FROM price_history WHERE ticker = stocks.ticker ORDER BY timestamp DESC LIMIT 1 OFFSET 1) as previous_price
+    FROM stocks 
+    WHERE EXISTS (SELECT 1 FROM price_history WHERE ticker = stocks.ticker)
+    ORDER BY ((current_price - previous_price) / previous_price * 100) ASC
+    LIMIT 10
+  `) : {
+    all: () => {
+      // Mock data for in-memory storage
+      return [
+        { ticker: 'TSLA', company_name: 'Tesla Inc.', market_cap: 800000000000, current_price: 200.0, previous_price: 210.0 },
+        { ticker: 'NFLX', company_name: 'Netflix Inc.', market_cap: 250000000000, current_price: 450.0, previous_price: 460.0 },
+        { ticker: 'META', company_name: 'Meta Platforms Inc.', market_cap: 900000000000, current_price: 300.0, previous_price: 305.0 }
+      ];
+    }
+  },
+
+  getUserFavorites: db ? db.prepare(`
+    SELECT ticker FROM user_favorites 
+    WHERE user_id = ?
+  `) : {
+    all: (userId: string) => {
+      return Array.from(inMemoryStorage.userFavorites.values())
+        .filter(fav => fav.userId === userId)
+        .map(fav => ({ ticker: fav.ticker }));
+    }
+  },
+
   // Cache status
   setCacheStatus: db ? db.prepare(`
     INSERT INTO cache_status (key, value, updated_at)
