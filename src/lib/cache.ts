@@ -11,8 +11,9 @@ function getMarketSession(): 'pre-market' | 'market' | 'after-hours' | 'closed' 
   const minute = easternTime.getMinutes();
   const day = easternTime.getDay(); // 0 = Sunday, 6 = Saturday
   
-  // Weekend check
-  if (day === 0 || day === 6) return 'closed';
+  // Weekend check - show after-hours from Friday close until Monday pre-market
+  if (day === 0 || day === 6) return 'after-hours'; // Sunday or Saturday
+  if (day === 1 && hour < 4) return 'after-hours'; // Monday before 4 AM
   
   // Weekday sessions (Eastern Time)
   if (hour < 4) return 'closed';

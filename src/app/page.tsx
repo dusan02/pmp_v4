@@ -88,13 +88,18 @@ export default function HomePage() {
     const isHoliday = isMarketHoliday(easternTime);
     
     if (isWeekend || isHoliday) {
-      // Market is closed, show pre-market or after-hours based on time
-      if (currentTimeInMinutes >= preMarketStart && currentTimeInMinutes < midDay) {
-        return 'pre-market'; // Morning hours - closer to market open
-      } else if (currentTimeInMinutes >= midDay && currentTimeInMinutes < afterHoursEnd) {
-        return 'after-hours'; // Afternoon/evening hours - closer to market close
+      // Market is closed during weekends and holidays
+      // From Friday market close until Monday pre-market, show after-hours
+      if (dayOfWeek === 0) { // Sunday
+        return 'after-hours'; // Whole Sunday is after-hours
+      } else if (dayOfWeek === 6) { // Saturday  
+        return 'after-hours'; // Whole Saturday is after-hours
+      } else if (dayOfWeek === 1 && currentTimeInMinutes < preMarketStart) { // Monday before 4 AM
+        return 'after-hours'; // Monday night hours (00:00 - 04:00) are still after-hours
+      } else if (currentTimeInMinutes >= preMarketStart && currentTimeInMinutes < afterHoursEnd) {
+        return 'after-hours'; // Holiday during trading hours - show after-hours
       } else {
-        return 'closed'; // Night hours
+        return 'closed'; // Late night hours
       }
     }
     

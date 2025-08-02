@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { initializePreloading } from '@/lib/preload'
 import { initializePWA } from '@/lib/sw-register'
+import { blogScheduler } from '@/lib/blogScheduler'
 
 export const metadata: Metadata = {
   title: 'Pre-Market Stock Tracking | Top 300 Companies - PreMarketPrice',
@@ -66,6 +67,11 @@ export default function RootLayout({
   if (typeof window !== 'undefined') {
     initializePreloading();
     initializePWA();
+  }
+
+  // Initialize blog scheduler (server-side only)
+  if (typeof window === 'undefined') {
+    blogScheduler.start();
   }
 
   return (
