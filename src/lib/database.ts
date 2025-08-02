@@ -154,6 +154,25 @@ export const dbHelpers = {
     }
   },
 
+  getPriceHistoryRange: db ? db.prepare(`
+    SELECT * FROM price_history 
+    WHERE ticker = ? 
+    AND timestamp BETWEEN ? AND ?
+    ORDER BY timestamp DESC
+  `) : {
+    all: (ticker: string, startDate: string, endDate: string) => {
+      return Array.from(inMemoryStorage.priceHistory.values())
+        .filter(entry => entry.ticker === ticker)
+        .filter(entry => {
+          const entryDate = new Date(entry.timestamp);
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          return entryDate >= start && entryDate <= end;
+        })
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
+  },
+
   // User favorites
   addFavorite: db ? db.prepare(`
     INSERT INTO user_favorites (user_id, ticker)
