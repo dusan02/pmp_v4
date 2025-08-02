@@ -53,8 +53,8 @@ export const CACHE_KEYS = {
   STOCK_COUNT: 'stock_count'
 } as const;
 
-// Cache TTL (Time To Live) - 5 minutes
-export const CACHE_TTL = 300; // seconds
+// Cache TTL (Time To Live) - 2 minutes
+export const CACHE_TTL = 120; // seconds
 
 // Helper functions with fallback to in-memory cache
 export async function getCachedData(key: string) {

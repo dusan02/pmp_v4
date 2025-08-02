@@ -645,10 +645,10 @@ class StockDataCache {
   }
 
   startBackgroundUpdates(): void {
-    // Update every 15 minutes
+    // Update every 2 minutes
     this.updateInterval = setInterval(() => {
       this.updateCache();
-    }, 15 * 60 * 1000);
+    }, 2 * 60 * 1000);
 
     // Initial update
     this.updateCache();
