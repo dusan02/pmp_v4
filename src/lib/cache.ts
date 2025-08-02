@@ -645,10 +645,10 @@ class StockDataCache {
   }
 
   startBackgroundUpdates(): void {
-    // Update every 2 minutes
+    // Update every 10 minutes (optimized for Redis usage)
     this.updateInterval = setInterval(() => {
       this.updateCache();
-    }, 2 * 60 * 1000);
+    }, 10 * 60 * 1000);
 
     // Initial update
     this.updateCache();
