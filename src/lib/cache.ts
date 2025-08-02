@@ -321,41 +321,9 @@ class StockDataCache {
               throw lastError;
             };
             
-            // Get ticker details for market cap
-            const detailsUrl = `https://api.polygon.io/v3/reference/tickers/${ticker}?apikey=${apiKey}`;
-            const detailsResponse = await fetchWithRetry(detailsUrl);
-             
-             let marketCap = 0;
-             let shares = 0;
-             
-             if (!detailsResponse.ok) {
-               const errorBody = await detailsResponse.text();
-               console.error(`❌ Polygon API failed for ${ticker} details:`, {
-                 status: detailsResponse.status,
-                 body: errorBody,
-                 url: detailsUrl,
-               });
-             } else {
-               const detailsData = await detailsResponse.json();
-               if (detailsData?.results) {
-                 const rawMarketCap = detailsData.results.market_cap || 0;
-                 shares = detailsData.results.weighted_shares_outstanding || 0;
-                 
-                 // Check if market cap data is fresh (< 60 seconds old)
-                 const updatedTimestamp = detailsData.results.updated;
-                 if (rawMarketCap > 0 && updatedTimestamp) {
-                   const ageMs = Date.now() - updatedTimestamp;
-                   if (ageMs > 60000) { // Older than 60 seconds
-                     console.warn(`⚠️ Stale market cap for ${ticker} (${Math.round(ageMs/1000)}s old), using calculated instead`);
-                     marketCap = 0; // Will be calculated manually below
-                   } else {
-                     marketCap = 0; // Always calculate manually for precision
-                   }
-                 } else {
-                   marketCap = 0; // Always calculate manually for precision
-                 }
-               }
-             }
+                        // Use cached share counts instead of API call to reduce requests
+            const shares = this.shareCounts[ticker] || 1000000000;
+            let marketCap = 0;
              
                          // GPT Single-Source-of-Truth: Get reference price with fallback
             let referencePrice: number | null = null;
@@ -384,32 +352,7 @@ class StockDataCache {
               console.warn(`⚠️ aggs/prev exception for ${ticker}:`, error);
             }
 
-            // 💡 PRECISION IMPROVEMENT: Get consolidated last trade first (more accurate than snapshot)
-            let consolidatedLastPrice = null;
-            let consolidatedDataSource = '';
-            
-            try {
-              const lastTradeUrl = `https://api.polygon.io/v2/last/trade/${ticker}?apikey=${apiKey}`;
-              const lastTradeResponse = await fetchWithRetry(lastTradeUrl);
-              
-              if (lastTradeResponse.ok) {
-                const lastTradeData = await lastTradeResponse.json();
-                if (lastTradeData.status === 'OK' && lastTradeData.results?.p > 0) {
-                  consolidatedLastPrice = lastTradeData.results.p;
-                  consolidatedDataSource = 'consolidatedLastTrade';
-                  console.log(`🎯 Consolidated last trade for ${ticker}: $${consolidatedLastPrice}`);
-                } else if (lastTradeData.status === 'DELAYED') {
-                  // Still use delayed data if available
-                  consolidatedLastPrice = lastTradeData.results.p;
-                  consolidatedDataSource = 'consolidatedLastTrade(delayed)';
-                  console.log(`⏱️ Delayed consolidated last trade for ${ticker}: $${consolidatedLastPrice}`);
-                }
-              } else {
-                console.warn(`⚠️ Consolidated last trade failed for ${ticker}, falling back to snapshot`);
-              }
-            } catch (error) {
-              console.warn(`⚠️ Consolidated last trade error for ${ticker}:`, error);
-            }
+            // Skip consolidated last trade to reduce API calls - use snapshot only
 
             // Get current price using modern snapshot API (includes pre-market, after-hours)
             const snapshotUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apikey=${apiKey}`;
