@@ -717,7 +717,7 @@ class StockDataCache {
     
     demoPrices.forEach(({ ticker, price, change }) => {
       const closePrice = price / (1 + change / 100);
-      const marketCap = price * (this.shareCounts[ticker] || 1000000000);
+      const marketCapInBillions = (price * (this.shareCounts[ticker] || 1000000000)) / 1000000000; // Convert to billions
       
       demoStocks.push({
         ticker,
@@ -725,7 +725,7 @@ class StockDataCache {
         closePrice: Math.round(closePrice * 100) / 100, // Round to 2 decimal places
         percentChange: Math.round(change * 100) / 100, // Round to 2 decimal places
         marketCapDiff: Math.round((price - closePrice) * (this.shareCounts[ticker] || 1000000000) / 1000000000 * 100) / 100, // Round to 2 decimal places
-        marketCap: marketCap,
+        marketCap: Math.round(marketCapInBillions * 100) / 100, // Store in billions, rounded to 2 decimal places
         lastUpdated: new Date()
       });
     });
