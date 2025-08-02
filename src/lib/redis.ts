@@ -5,55 +5,63 @@ let redisClient: any = null;
 let inMemoryCache = new Map();
 let cacheTimestamps = new Map();
 
-// Try to initialize Redis client
-try {
-  // Use Upstash Redis if available, otherwise fallback to local Redis
-  const redisUrl = process.env.UPSTASH_REDIS_REST_URL 
-    ? `redis://default:${process.env.UPSTASH_REDIS_REST_TOKEN}@${process.env.UPSTASH_REDIS_REST_URL.replace('https://', '')}:6379`
-    : process.env.REDIS_URL || 'redis://localhost:6379';
-  
-  console.log('🔍 Redis URL:', process.env.UPSTASH_REDIS_REST_URL ? 'Using Upstash Redis' : 'Using local Redis');
-  console.log('🔍 Environment check:', {
-    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL ? 'SET' : 'NOT SET',
-    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN ? 'SET' : 'NOT SET',
-    REDIS_URL: process.env.REDIS_URL ? 'SET' : 'NOT SET'
-  });
+// Check if we're in a serverless environment (Vercel)
+const isServerless = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+// Try to initialize Redis client only if not in serverless environment
+if (!isServerless) {
+  try {
+    // Use Upstash Redis if available, otherwise fallback to local Redis
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL 
+      ? `redis://default:${process.env.UPSTASH_REDIS_REST_TOKEN}@${process.env.UPSTASH_REDIS_REST_URL.replace('https://', '')}:6379`
+      : process.env.REDIS_URL || 'redis://localhost:6379';
     
-  redisClient = createClient({
-    url: redisUrl,
-    socket: {
-      reconnectStrategy: (retries) => {
-        if (retries > 10) {
-          console.error('Redis connection failed after 10 retries');
-          return false;
-        }
-        return Math.min(retries * 100, 3000);
-      }
-    }
-  });
-
-  // Connect to Redis
-  redisClient.on('error', (err) => {
-    console.error('Redis Client Error:', err);
-  });
-
-  redisClient.on('connect', () => {
-    console.log('✅ Redis connected successfully');
-  });
-
-  redisClient.on('ready', () => {
-    console.log('✅ Redis ready for operations');
-  });
-
-  // Initialize connection
-  if (!redisClient.isOpen) {
-    redisClient.connect().catch((err: any) => {
-      console.log('⚠️ Redis not available, using in-memory cache');
-      redisClient = null;
+    console.log('🔍 Redis URL:', process.env.UPSTASH_REDIS_REST_URL ? 'Using Upstash Redis' : 'Using local Redis');
+    console.log('🔍 Environment check:', {
+      UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL ? 'SET' : 'NOT SET',
+      UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN ? 'SET' : 'NOT SET',
+      REDIS_URL: process.env.REDIS_URL ? 'SET' : 'NOT SET'
     });
+      
+    redisClient = createClient({
+      url: redisUrl,
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > 10) {
+            console.error('Redis connection failed after 10 retries');
+            return false;
+          }
+          return Math.min(retries * 100, 3000);
+        }
+      }
+    });
+
+    // Connect to Redis
+    redisClient.on('error', (err) => {
+      console.error('Redis Client Error:', err);
+    });
+
+    redisClient.on('connect', () => {
+      console.log('✅ Redis connected successfully');
+    });
+
+    redisClient.on('ready', () => {
+      console.log('✅ Redis ready for operations');
+    });
+
+    // Initialize connection
+    if (!redisClient.isOpen) {
+      redisClient.connect().catch((err: any) => {
+        console.log('⚠️ Redis not available, using in-memory cache');
+        redisClient = null;
+      });
+    }
+  } catch (error) {
+    console.log('⚠️ Redis not available, using in-memory cache');
+    redisClient = null;
   }
-} catch (error) {
-  console.log('⚠️ Redis not available, using in-memory cache');
+} else {
+  console.log('⚠️ Serverless environment detected, using in-memory cache only');
   redisClient = null;
 }
 
