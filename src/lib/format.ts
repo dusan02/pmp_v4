@@ -4,6 +4,5 @@
  */
 export const formatBillions = (num: number) =>
   Intl.NumberFormat("en-US", { 
-    minimumFractionDigits: 2, 
-    maximumFractionDigits: 2 
+    maximumFractionDigits: 0 
   }).format(num) + " B"; 
