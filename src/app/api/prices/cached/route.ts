@@ -38,12 +38,12 @@ export async function GET(request: NextRequest) {
     // Get current cache status
     const cacheStatus = await stockDataCache.getCacheStatus();
     
-    // If cache is empty, trigger background update but return immediately with mock data
-    if (cacheStatus.count === 0) {
-      console.log('Cache is empty, triggering background update...');
+    // If cache is empty or has only demo data (20 stocks), trigger background update
+    if ((cacheStatus.count === 0 || cacheStatus.count <= 20) && !cacheStatus.isUpdating) {
+      console.log(`Cache has ${cacheStatus.count} stocks (likely demo data), triggering background update...`);
       // Don't await - let it run in background
       stockDataCache.updateCache().catch(err => console.error('Background cache update failed:', err));
-    } else if (refresh) {
+    } else if (refresh && !cacheStatus.isUpdating) {
       console.log('Refresh requested, updating cache in background...');
       // Don't await - let it run in background for refresh requests too
       stockDataCache.updateCache().catch(err => console.error('Background cache refresh failed:', err));
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       // Return all stocks
       const allStocks = await stockDataCache.getAllStocks();
       
-      // If no cached data available, return empty array (frontend will use mock data)
+      // If no cached data available or only demo data, return demo data with update message
       if (allStocks.length === 0) {
         return NextResponse.json({
           data: [],
@@ -74,10 +74,15 @@ export async function GET(request: NextRequest) {
         });
       }
       
+      // If we have demo data (20 stocks), show message that real data is loading
+      const message = allStocks.length <= 20 
+        ? 'Loading real data in background... (showing demo data)'
+        : refresh ? 'Cache refreshing in background' : 'All data from cache';
+      
       return NextResponse.json({
         data: allStocks,
         cacheStatus,
-        message: refresh ? 'Cache refreshing in background' : 'All data from cache'
+        message
       });
     }
 

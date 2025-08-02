@@ -2,6 +2,17 @@ import { getCachedData, setCachedData, getCacheStatus, setCacheStatus, CACHE_KEY
 import { dbHelpers, runTransaction, initializeDatabase } from './database';
 import { createBackgroundService } from './backgroundService';
 import { recordCacheHit, recordCacheMiss, recordApiCall } from './prometheus';
+import { 
+  getSharesOutstanding, 
+  computeMarketCap, 
+  computeMarketCapDiff, 
+  getCurrentPrice, 
+  getPreviousClose, 
+  validatePriceChange,
+  computePercentChange,
+  logCalculationData,
+  getMarketStatus
+} from './marketCapUtils';
 
 // Market session detection utility
 function getMarketSession(): 'pre-market' | 'market' | 'after-hours' | 'closed' {
@@ -120,36 +131,8 @@ class StockDataCache {
     'GRMN': 'Garmin', 'CCEP': 'Coca-Cola Europacific Partners', 'ALC': 'Alcon', 'TAK': 'Takeda Pharmaceutical'
   };
 
-  // Share counts for market cap calculation - Updated for 98% accuracy with Finviz
-  private readonly shareCounts: Record<string, number> = {
-    // Top 10 by market cap - Finviz verified
-    'NVDA': 24400000000, 'MSFT': 7440000000, 'AAPL': 15400000000, 'AMZN': 10400000000,
-    'GOOGL': 12500000000, 'GOOG': 12500000000, 'META': 2520000000, 'AVGO': 4700000000,
-    'BRK.A': 1400000000, 'BRK.B': 2200000000, 'TSLA': 3180000000,
-    
-    // Next 20 - Finviz verified
-    'JPM': 2900000000, 'WMT': 8000000000, 'LLY': 950000000, 'ORCL': 2800000000,
-    'V': 2100000000, 'MA': 920000000, 'NFLX': 420000000, 'XOM': 3900000000,
-    'COST': 440000000, 'JNJ': 2400000000, 'HD': 990000000, 'PLTR': 2200000000,
-    'PG': 2300000000, 'BAC': 8000000000, 'ABBV': 1770000000, 'CVX': 1900000000,
-    'KO': 4300000000, 'AMD': 1600000000, 'GE': 1100000000, 'CSCO': 4000000000,
-    
-    // Rest of top 200 - Updated for accuracy
-    'TMUS': 1200000000, 'WFC': 3600000000, 'CRM': 1000000000, 'PM': 1500000000,
-    'IBM': 900000000, 'UNH': 920000000, 'MS': 1600000000, 'GS': 320000000,
-    'INTU': 280000000, 'LIN': 480000000, 'ABT': 1700000000, 'AXP': 1100000000,
-    'BX': 700000000, 'DIS': 1800000000, 'MCD': 730000000, 'RTX': 1300000000,
-    'NOW': 200000000, 'MRK': 2500000000, 'CAT': 500000000, 'T': 7100000000,
-    'PEP': 1400000000, 'UBER': 2000000000, 'BKNG': 35000000, 'TMO': 380000000,
-    'VZ': 4200000000, 'SCHW': 1800000000, 'ISRG': 35000000, 'QCOM': 1100000000,
-    'C': 1900000000, 'TXN': 900000000, 'BA': 600000000, 'BLK': 150000000,
-    'ACN': 630000000, 'SPGI': 250000000, 'AMGN': 540000000, 'ADBE': 450000000,
-    'BSX': 1400000000, 'SYK': 380000000, 'ETN': 400000000, 'AMAT': 800000000,
-    'ANET': 300000000, 'NEE': 2000000000, 'DHR': 1400000000, 'HON': 1300000000,
-    'TJX': 1100000000, 'PGR': 580000000, 'GILD': 1200000000, 'DE': 280000000,
-    'PFE': 5600000000, 'COF': 400000000, 'KKR': 880000000, 'PANW': 300000000,
-    'UNP': 600000000, 'APH': 120000000, 'LOW': 580000000, 'LRCX': 130000000,
-    'MU': 1100000000, 'ADP': 400000000, 'CMCSA': 4000000000, 'COP': 1200000000,
+  // Share counts are now fetched dynamically from Polygon API
+  // See marketCapUtils.ts for implementation 'ADP': 400000000, 'CMCSA': 4000000000, 'COP': 1200000000,
     'KLAC': 130000000, 'VRTX': 260000000, 'MDT': 1300000000, 'SNPS': 150000000,
     'NKE': 1200000000, 'CRWD': 240000000, 'ADI': 500000000, 'WELL': 800000000,
     'CB': 200000000, 'ICE': 570000000, 'SBUX': 1100000000, 'TT': 90000000,
@@ -324,39 +307,12 @@ class StockDataCache {
               throw lastError;
             };
             
-                        // Use cached share counts instead of API call to reduce requests
-            const shares = this.shareCounts[ticker] || 1000000000;
-            let marketCap = 0;
-             
-                         // GPT Single-Source-of-Truth: Get reference price with fallback
-            let referencePrice: number | null = null;
+                        // Get shares outstanding from Polygon API with caching
+            const shares = await getSharesOutstanding(ticker);
             
-            // 1. Primary: Use daily aggregates /prev (most reliable)
-            try {
-              const prevUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`;
-              const prevResponse = await fetchWithRetry(prevUrl);
-              
-              if (prevResponse.ok) {
-                const prevData = await prevResponse.json();
-                console.log(`📊 Prev data for ${ticker}:`, JSON.stringify(prevData, null, 2));
-                
-                if (prevData?.results?.[0]?.c) {
-                  referencePrice = prevData.results[0].c;
-                  console.log(`✅ Using aggs/prev reference: $${referencePrice} for ${ticker}`);
-                }
-              } else {
-                const errorBody = await prevResponse.text();
-                console.warn(`⚠️ aggs/prev failed for ${ticker}:`, {
-                  status: prevResponse.status,
-                  body: errorBody
-                });
-              }
-            } catch (error) {
-              console.warn(`⚠️ aggs/prev exception for ${ticker}:`, error);
-            }
-
-            // Skip consolidated last trade to reduce API calls - use snapshot only
-
+            // Get previous close from Polygon aggregates with adjusted=true
+            const prevClose = await getPreviousClose(ticker);
+            
             // Get current price using modern snapshot API (includes pre-market, after-hours)
             const snapshotUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apikey=${apiKey}`;
             const snapshotResponse = await fetchWithRetry(snapshotUrl);
@@ -374,64 +330,17 @@ class StockDataCache {
             const snapshotData = await snapshotResponse.json();
             console.log(`📊 Snapshot data for ${ticker}:`, JSON.stringify(snapshotData, null, 2));
             
-            // 2. Fallback: Use snapshot prevDay (if aggs/prev failed)
-            if (!referencePrice && snapshotData.ticker?.prevDay?.c) {
-              referencePrice = snapshotData.ticker.prevDay.c;
-              console.log(`🔄 Using snapshot fallback reference: $${referencePrice} for ${ticker}`);
-            }
-            
-            // 3. Final check: Skip if no reference price available
-            if (!referencePrice) {
-              console.warn(`❌ No valid reference price for ${ticker} - skipping`);
-              return null;
-            }
-            
-            // Update prevClose with our single-source-of-truth reference
-            const prevClose = referencePrice;
-
             // Validate snapshot status
             if (snapshotData.status !== 'OK') {
               console.warn(`❌ Invalid snapshot status for ${ticker}: ${snapshotData.status}`);
               return null;
             }
 
-            // 🎯 IMPROVED PRIORITY ORDER: Consolidated Last Trade → Snapshot → Fallbacks
-            let currentPrice = 0;
-            let dataSource = '';
+            // Get current price using consistent source
+            const currentPrice = getCurrentPrice(snapshotData);
             
-            // Priority order for current price (PRECISION IMPROVEMENT)
-            if (snapshotData.ticker?.lastTrade?.p && snapshotData.ticker.lastTrade.p > 0) {
-              // 2. Snapshot last trade (fallback)
-              currentPrice = snapshotData.ticker.lastTrade.p;
-              dataSource = 'snapshotLastTrade';
-            } else if (snapshotData.ticker?.min?.c && snapshotData.ticker.min.c > 0) {
-              // 3. Minute data
-              currentPrice = snapshotData.ticker.min.c;
-              dataSource = 'minute';
-            } else if (snapshotData.ticker?.day?.c && snapshotData.ticker.day.c > 0) {
-              // 4. Day close
-              currentPrice = snapshotData.ticker.day.c;
-              dataSource = 'day';
-            } else if (snapshotData.ticker?.prevDay?.c && snapshotData.ticker.prevDay.c > 0) {
-              // 5. Previous day close (last resort)
-              const prevDayClose = snapshotData.ticker.prevDay.c;
-              if (Math.abs(prevDayClose - prevClose) < 0.01) {
-                // Same as prevClose, would result in 0% change - skip
-                console.warn(`⚠️ ${ticker} prevDay.c ($${prevDayClose}) same as prevClose ($${prevClose}), skipping to avoid 0% change`);
-                return null;
-              }
-              currentPrice = prevDayClose;
-              dataSource = 'prevDay';
-            }
-
-            if (!currentPrice || currentPrice === 0) {
-              console.warn(`❌ No valid price data for ${ticker} - all price fields are 0 or missing`);
-              console.warn(`   lastTrade.p: ${snapshotData?.ticker?.lastTrade?.p}`);
-              console.warn(`   min.c: ${snapshotData?.ticker?.min?.c}`);
-              console.warn(`   day.c: ${snapshotData?.ticker?.day?.c}`);
-              console.warn(`   prevDay.c: ${snapshotData?.ticker?.prevDay?.c}`);
-              return null;
-            }
+            // Validate price data for extreme changes
+            validatePriceChange(currentPrice, prevClose);
             
             // Get market session - use Polygon's snapshot type if available, otherwise fallback to time-based
             let marketSession = getMarketSession(); // Fallback
@@ -510,19 +419,19 @@ class StockDataCache {
             
             console.log(`📊 ${sessionLabel} session for ${ticker}: $${currentPrice} (${dataSource}) vs ref $${referencePrice} (${percentChange >= 0 ? '+' : ''}${percentChange.toFixed(2)}%)`);
             
-            // Validate share count - no more 1B fallback
-            if (!shares && !this.shareCounts[ticker]) {
-              console.warn(`❌ Missing share count for ${ticker}, skipping stock`);
-              return null;
-            }
-            const shareCount = shares || this.shareCounts[ticker];
+            // Get market status for reference
+            const marketStatus = await getMarketStatus();
+            console.log(`📈 Market status: ${marketStatus.market} (${marketStatus.serverTime})`);
             
-            // Fix market cap calculation - avoid double counting when Polygon provides live market cap
-            // GPT Recommendation: Always calculate market caps manually for precision
-            const calculatedMarketCap = currentPrice * shareCount / 1_000_000_000;
-            const marketCapPrev = prevClose * shareCount / 1_000_000_000;  
-            const marketCapDiff = calculatedMarketCap - marketCapPrev;
-            const finalMarketCap = calculatedMarketCap;
+            // Calculate percent change using Decimal.js for precision
+            const percentChange = computePercentChange(currentPrice, prevClose);
+            
+            // Calculate market cap and diff using centralized utilities with Decimal.js precision
+            const finalMarketCap = computeMarketCap(currentPrice, shares);
+            const marketCapDiff = computeMarketCapDiff(currentPrice, prevClose, shares);
+            
+            // Log detailed calculation data for debugging
+            logCalculationData(ticker, currentPrice, prevClose, shares, finalMarketCap, marketCapDiff, percentChange);
 
             const stockData = {
               ticker,
@@ -539,7 +448,7 @@ class StockDataCache {
             // Save to database
             try {
               const companyName = this.companyNames[ticker] || ticker;
-              const shareCount = shares || this.shareCounts[ticker];
+              const shareCount = shares;
               
               runTransaction(() => {
                 // Update stock info
@@ -633,7 +542,15 @@ class StockDataCache {
   startBackgroundUpdates(): void {
     // Update every 2 minutes (optimal balance: performance + cost)
     this.updateInterval = setInterval(() => {
-      this.updateCache();
+      // Only update if we don't have real data yet (more than 20 stocks)
+      this.getCacheStatus().then(status => {
+        if (status.count <= 20) {
+          console.log('🔄 Background update: cache has demo data, updating...');
+          this.updateCache();
+        } else {
+          console.log('✅ Background update: cache has real data, skipping...');
+        }
+      });
     }, 2 * 60 * 1000);
 
     // Initial update
@@ -717,14 +634,16 @@ class StockDataCache {
     
     demoPrices.forEach(({ ticker, price, change }) => {
       const closePrice = price / (1 + change / 100);
-      const marketCapInBillions = (price * (this.shareCounts[ticker] || 1000000000)) / 1000000000; // Convert to billions
+      // Use estimated share counts for demo data
+      const estimatedShares = 1000000000; // 1B shares as fallback
+      const marketCapInBillions = (price * estimatedShares) / 1000000000; // Convert to billions
       
       demoStocks.push({
         ticker,
         currentPrice: Math.round(price * 100) / 100, // Round to 2 decimal places
         closePrice: Math.round(closePrice * 100) / 100, // Round to 2 decimal places
         percentChange: Math.round(change * 100) / 100, // Round to 2 decimal places
-        marketCapDiff: Math.round((price - closePrice) * (this.shareCounts[ticker] || 1000000000) / 1000000000 * 100) / 100, // Round to 2 decimal places
+        marketCapDiff: Math.round((price - closePrice) * estimatedShares / 1000000000 * 100) / 100, // Round to 2 decimal places
         marketCap: Math.round(marketCapInBillions * 100) / 100, // Store in billions, rounded to 2 decimal places
         lastUpdated: new Date()
       });

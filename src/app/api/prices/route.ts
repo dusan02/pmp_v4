@@ -1,4 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { 
+  getSharesOutstanding, 
+  computeMarketCap, 
+  computeMarketCapDiff, 
+  getCurrentPrice, 
+  getPreviousClose, 
+  validatePriceChange,
+  computePercentChange,
+  logCalculationData,
+  getMarketStatus
+} from '@/lib/marketCapUtils';
 // import { prisma } from '@/lib/prisma';
 
 interface StockData {
@@ -7,6 +18,7 @@ interface StockData {
   closePrice: number;
   percentChange: number;
   marketCapDiff: number;
+  marketCap: number;
 }
 
 interface PolygonV2Response {
@@ -61,6 +73,12 @@ export async function GET(request: NextRequest) {
     // Process tickers in parallel
     const promises = tickerList.map(async (ticker) => {
       try {
+        // Get shares outstanding from Polygon API with caching
+        const shares = await getSharesOutstanding(ticker);
+        
+        // Get previous close from Polygon aggregates with adjusted=true
+        const prevClose = await getPreviousClose(ticker);
+        
         // Get snapshot data from Polygon.io v2 API
         const snapshotUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apikey=${apiKey}`;
         const snapshotResponse = await fetch(snapshotUrl);
@@ -72,42 +90,25 @@ export async function GET(request: NextRequest) {
 
         const snapshotData: PolygonV2Response = await snapshotResponse.json();
 
-        // Calculate values from the v2 API response
-        const currentPrice = snapshotData.ticker.day.c; // Current close price
-        const prevClose = snapshotData.ticker.prevDay.c; // Previous close
+        // Get current price using ONLY lastTrade.p (no fallbacks)
+        const currentPrice = getCurrentPrice(snapshotData);
         
-        // Calculate percent change manually for accuracy
-        const percentChange = ((currentPrice - prevClose) / prevClose) * 100;
+        // Validate price data for extreme changes
+        validatePriceChange(currentPrice, prevClose);
         
-        // For market cap calculation, use more accurate share counts
-        const shareCounts: Record<string, number> = {
-          'AAPL': 15400000000,
-          'MSFT': 7440000000,
-          'GOOGL': 12500000000,
-          'AMZN': 10400000000,
-          'NVDA': 24400000000, // Updated based on Finviz data
-          'META': 2520000000,
-          'TSLA': 3180000000,
-          'BRK-B': 1400000000,
-          'LLY': 950000000,
-          'TSM': 5180000000,
-          'V': 2100000000,
-          'UNH': 920000000,
-          'XOM': 3900000000,
-          'JNJ': 2400000000,
-          'WMT': 8000000000,
-          'JPM': 2900000000,
-          'PG': 2300000000,
-          'MA': 920000000,
-          'AVGO': 4700000000,
-          'HD': 990000000
-        };
+        // Get market status for reference
+        const marketStatus = await getMarketStatus();
+        console.log(`📈 Market status: ${marketStatus.market} (${marketStatus.serverTime})`);
         
-        const shares = shareCounts[ticker] || 1000000000; // Default fallback
-        const marketCapDiff = (currentPrice - prevClose) * shares / 1_000_000_000;
-
-        // Calculate market cap (current price * shares)
-        const marketCap = (currentPrice * shares) / 1_000_000_000;
+        // Calculate percent change using Decimal.js for precision
+        const percentChange = computePercentChange(currentPrice, prevClose);
+        
+        // Calculate market cap and diff using centralized utilities with Decimal.js precision
+        const marketCap = computeMarketCap(currentPrice, shares);
+        const marketCapDiff = computeMarketCapDiff(currentPrice, prevClose, shares);
+        
+        // Log detailed calculation data for debugging
+        logCalculationData(ticker, currentPrice, prevClose, shares, marketCap, marketCapDiff, percentChange);
 
         const stockData = {
           ticker,
