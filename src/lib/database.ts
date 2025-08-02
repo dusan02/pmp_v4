@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
 
 // Check if we're in a serverless environment (Vercel)
 const isServerless = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
@@ -13,7 +14,6 @@ let db: any = null;
 if (!isServerless) {
   try {
     // Ensure data directory exists
-    import fs from 'fs';
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
