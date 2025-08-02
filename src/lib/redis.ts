@@ -7,8 +7,13 @@ let cacheTimestamps = new Map();
 
 // Try to initialize Redis client
 try {
+  // Use Upstash Redis if available, otherwise fallback to local Redis
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL 
+    ? `redis://default:${process.env.UPSTASH_REDIS_REST_TOKEN}@${process.env.UPSTASH_REDIS_REST_URL.replace('https://', '')}:6379`
+    : process.env.REDIS_URL || 'redis://localhost:6379';
+    
   redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    url: redisUrl,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > 10) {
@@ -53,8 +58,8 @@ export const CACHE_KEYS = {
   STOCK_COUNT: 'stock_count'
 } as const;
 
-// Cache TTL (Time To Live) - 10 minutes
-export const CACHE_TTL = 600; // seconds
+// Cache TTL (Time To Live) - 2 minutes
+export const CACHE_TTL = 120; // seconds
 
 // Helper functions with fallback to in-memory cache
 export async function getCachedData(key: string) {
