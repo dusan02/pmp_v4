@@ -7,9 +7,29 @@ export async function GET(request: NextRequest) {
     const tickers = searchParams.get('tickers');
     const refresh = searchParams.get('refresh') === 'true';
 
-      // Hardcoded API key for reliability (avoids .env.local issues)
-  const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
-  console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
+    // Hardcoded API key for reliability (avoids .env.local issues)
+    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+    console.log('🔍 API Key loaded:', apiKey ? 'Yes' : 'No');
+    
+    // Test API call to see what's happening
+    console.log('🔍 Testing Polygon API call...');
+    try {
+      const testUrl = `https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/AAPL?apikey=${apiKey}`;
+      const testResponse = await fetch(testUrl);
+      console.log('🔍 Test API response status:', testResponse.status);
+      if (!testResponse.ok) {
+        const errorBody = await testResponse.text();
+        console.error('❌ Test API call failed:', {
+          status: testResponse.status,
+          body: errorBody,
+          url: testUrl
+        });
+      } else {
+        console.log('✅ Test API call successful');
+      }
+    } catch (error) {
+      console.error('❌ Test API call exception:', error);
+    }
 
     // Get current cache status
     const cacheStatus = await stockDataCache.getCacheStatus();
