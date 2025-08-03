@@ -163,7 +163,7 @@ class StockDataCache {
         // Use environment variable for API key
         const apiKey = process.env.POLYGON_API_KEY || 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
         console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
-             const batchSize = 15; // Reduced batch size for better reliability
+             const batchSize = 5; // Smaller batch size for Vercel reliability
        let results: CachedStockData[] = [];
 
                // Test first API call to see exact error
@@ -234,7 +234,7 @@ class StockDataCache {
                   
                   const response = await fetch(url, {
                     ...options,
-                    signal: AbortSignal.timeout(30000) // 30 second timeout for Vercel
+                    signal: AbortSignal.timeout(15000) // 15 second timeout for Vercel
                   });
                   
                   if (response.ok) {
