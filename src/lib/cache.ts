@@ -459,10 +459,11 @@ class StockDataCache {
         console.warn(`⚠️ Partial update: only ${results.length}/${this.TICKERS.length} stocks (${successRate.toFixed(1)}%) processed successfully`);
       }
       
-      // If no results at all, use demo data as fallback
+      // If no results at all, log error but don't use demo data
       if (results.length === 0) {
-        console.warn('⚠️ No API data received, using demo data as fallback');
-        results = this.getDemoData();
+        console.error('❌ No API data received - API calls are failing completely');
+        console.error('❌ This indicates a serious issue with Polygon API or network connectivity');
+        // Don't use demo data - let the cache remain empty to indicate the problem
       }
 
       // Update Redis cache
@@ -518,19 +519,32 @@ class StockDataCache {
     try {
       // Try to get from Redis first
       const cachedData = await getCachedData(CACHE_KEYS.STOCK_DATA);
-      if (cachedData) {
+      if (cachedData && cachedData.length > 20) {
         recordCacheHit('redis');
         return cachedData.sort((a: CachedStockData, b: CachedStockData) => b.marketCap - a.marketCap);
       }
       
       recordCacheMiss('redis');
-      // Fallback to in-memory cache
-      return Array.from(this.cache.values()).sort((a, b) => b.marketCap - a.marketCap);
+      // Only return in-memory cache if it has real data (more than 20 stocks)
+      const inMemoryData = Array.from(this.cache.values());
+      if (inMemoryData.length > 20) {
+        return inMemoryData.sort((a, b) => b.marketCap - a.marketCap);
+      }
+      
+      // If no real data available, return empty array
+      console.warn('⚠️ No real data available, returning empty array');
+      return [];
     } catch (error) {
       console.error('Error getting cached data:', error);
-      console.error('Error getting cached data:', error);
       recordCacheMiss('redis');
-      return Array.from(this.cache.values()).sort((a, b) => b.marketCap - a.marketCap);
+      
+      // Only return in-memory cache if it has real data
+      const inMemoryData = Array.from(this.cache.values());
+      if (inMemoryData.length > 20) {
+        return inMemoryData.sort((a, b) => b.marketCap - a.marketCap);
+      }
+      
+      return [];
     }
   }
 
