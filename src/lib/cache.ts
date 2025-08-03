@@ -163,7 +163,7 @@ class StockDataCache {
         // Hardcoded API key for reliability (avoids environment variable issues)
         const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
         console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
-             const batchSize = 5; // Smaller batch size for Vercel reliability
+             const batchSize = 2; // Very small batch size for Vercel reliability
        let results: CachedStockData[] = [];
 
                // Test first API call to see exact error
@@ -217,8 +217,8 @@ class StockDataCache {
            
            // Add delay between batches within group
            if (i > 0) {
-             console.log(`⏳ Rate limiting: waiting 200ms between batches...`);
-             await new Promise(resolve => setTimeout(resolve, 200));
+             console.log(`⏳ Rate limiting: waiting 500ms between batches...`);
+             await new Promise(resolve => setTimeout(resolve, 500));
            }
         
         const batchPromises = batch.map(async (ticker) => {
@@ -234,7 +234,7 @@ class StockDataCache {
                   
                   const response = await fetch(url, {
                     ...options,
-                    signal: AbortSignal.timeout(15000) // 15 second timeout for Vercel
+                    signal: AbortSignal.timeout(8000) // 8 second timeout for Vercel
                   });
                   
                   if (response.ok) {

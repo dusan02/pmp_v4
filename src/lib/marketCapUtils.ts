@@ -16,7 +16,7 @@ export async function getMarketStatus(): Promise<{ market: string; serverTime: s
 
     const url = `https://api.polygon.io/v1/marketstatus/now?apiKey=${apiKey}`;
     const response = await fetch(url, {
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+      signal: AbortSignal.timeout(8000) // 8 second timeout for Vercel
     });
 
     if (!response.ok) {
@@ -54,7 +54,7 @@ export async function getSharesOutstanding(ticker: string): Promise<number> {
 
     const url = `https://api.polygon.io/v3/reference/tickers/${ticker}?apiKey=${apiKey}`;
     const response = await fetch(url, {
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+      signal: AbortSignal.timeout(8000) // 8 second timeout for Vercel
     });
 
     if (!response.ok) {
@@ -107,7 +107,7 @@ export async function getPreviousClose(ticker: string): Promise<number> {
     // Use /v2/aggs/prev?adjusted=true as single source of truth
     const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`;
     const response = await fetch(url, {
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+      signal: AbortSignal.timeout(8000) // 8 second timeout for Vercel
     });
 
     if (!response.ok) {
