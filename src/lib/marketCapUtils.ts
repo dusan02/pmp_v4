@@ -12,10 +12,7 @@ const prevCloseCache = new Map<string, { prevClose: number; timestamp: number }>
  */
 export async function getMarketStatus(): Promise<{ market: string; serverTime: string }> {
   try {
-    const apiKey = process.env.POLYGON_API_KEY;
-    if (!apiKey) {
-      throw new Error('Polygon API key not configured');
-    }
+    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
 
     const url = `https://api.polygon.io/v1/marketstatus/now?apiKey=${apiKey}`;
     const response = await fetch(url, {
@@ -53,10 +50,7 @@ export async function getSharesOutstanding(ticker: string): Promise<number> {
   }
 
   try {
-    const apiKey = process.env.POLYGON_API_KEY;
-    if (!apiKey) {
-      throw new Error('Polygon API key not configured');
-    }
+    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
 
     const url = `https://api.polygon.io/v3/reference/tickers/${ticker}?apiKey=${apiKey}`;
     const response = await fetch(url, {
@@ -108,10 +102,7 @@ export async function getPreviousClose(ticker: string): Promise<number> {
   }
 
   try {
-    const apiKey = process.env.POLYGON_API_KEY;
-    if (!apiKey) {
-      throw new Error('Polygon API key not configured');
-    }
+    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
 
     // Use /v2/aggs/prev?adjusted=true as single source of truth
     const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/prev?adjusted=true&apiKey=${apiKey}`;

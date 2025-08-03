@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     const tickerList = tickers.split(',').map(t => t.trim().toUpperCase());
-    const apiKey = process.env.POLYGON_API_KEY;
+    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
 
     if (!apiKey) {
       return NextResponse.json(
