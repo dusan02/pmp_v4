@@ -249,7 +249,7 @@ export default function HomePage() {
           }
         } else {
           setStockData(mockStocks);
-          setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key. See ENV_SETUP.md for instructions.');
+          setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key in Vercel environment variables. See vercel-env-setup.md for instructions.');
         }
       }
       
@@ -259,7 +259,7 @@ export default function HomePage() {
       }
     } catch (err) {
       console.log('API error, using mock data:', err);
-      setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key. See ENV_SETUP.md for instructions.');
+      setError('Using demo data - API temporarily unavailable. To get live data, please set up your Polygon.io API key in Vercel environment variables. See vercel-env-setup.md for instructions.');
       // Fallback to mock data
       setStockData(mockStocks);
     } finally {

@@ -160,8 +160,8 @@ class StockDataCache {
     console.log('Starting cache update...');
 
     try {
-                           // Hardcoded API key for reliability (avoids .env.local issues)
-        const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+        // Use environment variable for API key
+        const apiKey = process.env.POLYGON_API_KEY || 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
         console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
              const batchSize = 15; // Reduced batch size for better reliability
        let results: CachedStockData[] = [];

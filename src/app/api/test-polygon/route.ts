@@ -4,7 +4,7 @@ export async function GET() {
   console.log('🔍 Testing Polygon API...');
   
   try {
-    const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+    const apiKey = process.env.POLYGON_API_KEY || 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
     
     // Test 1: NVDA snapshot
     console.log('📊 Testing NVDA snapshot...');
