@@ -1,0 +1,5 @@
+[33ma8671c3[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix Vercel environment variables issue - replace hardcoded API keys with environment variables
+[33m7b8b077[m[33m ([m[1;31mproduction/main[m[33m)[m  Fix production cache issue - remove demo data fallback
+[33m63e6d2c[m  Add Polygon API test endpoint for production debugging
+[33m87d579d[m  Fix production cache issue - add debug endpoints and improve force-update
+[33me10fa48[m  Fix NVDA data discrepancy - now shows correct -0.70% from Polygon API

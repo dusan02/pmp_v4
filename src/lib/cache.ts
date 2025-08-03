@@ -160,8 +160,8 @@ class StockDataCache {
     console.log('Starting cache update...');
 
     try {
-        // Use environment variable for API key
-        const apiKey = process.env.POLYGON_API_KEY || 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
+        // Hardcoded API key for reliability (avoids environment variable issues)
+        const apiKey = 'Vi_pMLcusE8RA_SUvkPAmiyziVzlmOoX';
         console.log('API Key loaded:', apiKey ? 'Yes' : 'No');
              const batchSize = 5; // Smaller batch size for Vercel reliability
        let results: CachedStockData[] = [];
