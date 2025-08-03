@@ -151,15 +151,30 @@ export async function getPreviousClose(ticker: string): Promise<number> {
 }
 
 /**
- * Get current price from Polygon snapshot data - ONLY lastTrade.p
+ * Get current price from Polygon snapshot data with smart fallbacks
  */
 export function getCurrentPrice(snapshotData: any): number {
-  // STRICT: Only use lastTrade.p, no fallbacks
+  // Priority order for current price:
+  // 1. lastTrade.p (most recent trade)
+  // 2. min.c (current minute data)
+  // 3. day.c (daily close)
+  
   if (snapshotData?.ticker?.lastTrade?.p && snapshotData.ticker.lastTrade.p > 0) {
+    console.log(`📊 Using lastTrade.p: $${snapshotData.ticker.lastTrade.p}`);
     return snapshotData.ticker.lastTrade.p;
   }
   
-  throw new Error('No valid lastTrade.p found in snapshot data');
+  if (snapshotData?.ticker?.min?.c && snapshotData.ticker.min.c > 0) {
+    console.log(`📊 Using min.c: $${snapshotData.ticker.min.c}`);
+    return snapshotData.ticker.min.c;
+  }
+  
+  if (snapshotData?.ticker?.day?.c && snapshotData.ticker.day.c > 0) {
+    console.log(`📊 Using day.c: $${snapshotData.ticker.day.c}`);
+    return snapshotData.ticker.day.c;
+  }
+  
+  throw new Error('No valid current price found in snapshot data');
 }
 
 /**
