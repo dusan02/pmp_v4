@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="15" fill="#3b82f6" stroke="#1e40af" stroke-width="1"/>
+  
+  <!-- Star -->
+  <path d="M16 6 L18.5 12.5 L25 13 L20 17.5 L21.5 24 L16 20.5 L10.5 24 L12 17.5 L7 13 L13.5 12.5 Z" 
+        fill="#ffffff" 
+        stroke="#ffffff" 
+        stroke-width="0.5"/>
+  
+  <!-- Small trend line inside star -->
+  <path d="M12 18 L16 16 L20 18" 
+        stroke="#3b82f6" 
+        stroke-width="1.5" 
+        fill="none" 
+        stroke-linecap="round"/>
+</svg> 

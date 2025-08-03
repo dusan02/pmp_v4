@@ -89,7 +89,8 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
         
         {/* Standard meta tags */}
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/favicon-simple.svg" type="image/svg+xml" />
+        <link rel="alternate icon" href="/favicon.ico" type="image/x-icon" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         
