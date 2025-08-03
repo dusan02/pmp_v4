@@ -320,8 +320,6 @@ class StockDataCache {
               }
             }
             
-            // Reference price already determined above using single-source-of-truth approach
-            
             // If no Polygon session type, determine session label based on data availability
             if (!snapshotData.ticker?.type) {
               if (snapshotData.ticker?.min?.c && snapshotData.ticker.min.c > 0) {
